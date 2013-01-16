@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Dune Buggy</title>
+
+	<meta name="description" content="DuneBuggy">
+	
+	<!-- CSS -->
+	<link rel="stylesheet/less" type="text/css" href="less/styles.less">
+
+	<!-- LESS CSS -->
+	<script src="lib/less/less.js"></script>
+	
+	<!-- jQuery -->
+	<script src="lib/jquery/jquery.js"></script>
+	
+	<!-- Class -->
+	<script src="lib/class/Class.js"></script>
+	<script src="lib/class/EventEmitter.js"></script>
+	
+	<!-- Socket.io -->
+	<script src="lib/socketio/socket.io.js"></script>
+	
+	<!-- THREE -->
+	<script src="lib/three/three_53.js"></script>
+	<script src="lib/three/Stats.js"></script>
+	
+	<!-- Physijs -->
+	<script src="lib/physijs/physi.js"></script>
+  
+	<!-- DuneBuggy -->
+	<script src="duneBuggy/db.js"></script>
+	<script src="duneBuggy/db.util.js"></script>
+  
+	
+	<!-- Classes -->
+	<script src="duneBuggy/classes/db.Sound.js"></script>
+	<script src="duneBuggy/classes/db.Comm.js"></script>
+	<script src="duneBuggy/classes/db.Radar.js"></script>
+	<script src="duneBuggy/classes/db.CameraControls.js"></script>
+	
+	<!-- Game objects -->
+	<script src="duneBuggy/classes/db.GameObject.js"></script>
+	
+	<!-- Tank -->
+	<script src="duneBuggy/classes/db.Buggy.js"></script>
+	<!--
+	<script src="duneBuggy/classes/db.Tank.js"></script>
+	<script src="duneBuggy/classes/db.OwnTank.js"></script>
+	-->
+	<script src="duneBuggy/classes/db.FlatGround.js"></script>
+	<script src="duneBuggy/classes/db.Ground.js"></script>
+	<script src="duneBuggy/classes/db.Track.js"></script>
+	
+	<!-- Tank Controls -->
+	<script src="duneBuggy/classes/db.Mouse.js"></script>
+	<script src="duneBuggy/classes/db.Keyboard.js"></script>
+	<script src="duneBuggy/classes/db.Controls.js"></script>
+	
+	<!-- Munitions -->
+	<script src="duneBuggy/classes/db.Explosion.js"></script>
+	<script src="duneBuggy/classes/db.Bullet.js"></script>
+	<script src="duneBuggy/classes/db.Missile.js"></script>
+	
+	<!-- Map Items -->
+	<script src="duneBuggy/classes/db.MapItem.js"></script>
+	<script src="duneBuggy/classes/db.Crate.js"></script>
+	<script src="duneBuggy/classes/db.Turret.js"></script>
+	<script src="duneBuggy/classes/db.Barrel.js"></script>
+	<script src="duneBuggy/classes/db.OilTank.js"></script>
+	<script src="duneBuggy/classes/db.WallSection.js"></script>
+	<script src="duneBuggy/classes/db.WallCorner.js"></script>
+	<script src="duneBuggy/classes/db.WallConnector.js"></script>
+	
+	<!-- Maps -->
+	<script src="duneBuggy/maps/lollyPopLand.js"></script>
+	
+	<!-- Game -->
+	<script src="duneBuggy/classes/db.Game.js"></script>
+	<script src="duneBuggy/classes/db.DuneBuggyGame.js"></script>
+	
+	<script>
+		$(document).ready(function() {
+			db.game = new db.DuneBuggyGame();
+		});
+	</script>
+
+</head>
+
+<body>
+</body>
+
+</html>
