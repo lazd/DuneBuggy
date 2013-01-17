@@ -3,7 +3,7 @@ db.Barrel = new Class({
 	extend: db.MapItem,
 	options: {
 		hp: 7,
-		mass: 0.5,
+		mass: 0.015,
 		model: {
 			url: "duneBuggy/models/barrel.js",
 			textures: [
