@@ -27,6 +27,10 @@ Open `client/index.html` in your WebGL capable browser. You'll have to run a sim
 
 **Nitrous:** Shift
 
+**Switch view:** V
+
+**Toggle chase/turret camera:** C
+
 **Toggle full screen:** Enter
 
 
