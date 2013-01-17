@@ -65,7 +65,9 @@ db.Comm = new Class({
 			time: time,
 			pos: tankPosition.pos,
 			rot: tankPosition.rot,
-			tRot: tankPosition.tRot
+			tRot: tankPosition.tRot,
+			aVeloc: tankPosition.aVeloc,
+			lVeloc: tankPosition.lVeloc
 		};
 
 		// Broadcast position
@@ -89,7 +91,9 @@ db.Comm = new Class({
 					time: time,
 					pos: tankPosition.pos,
 					rot: tankPosition.rot,
-					tRot: tankPosition.tRot - tankPosition.rot // Include tank rotation so turret is rendered correctly
+					tRot: tankPosition.tRot - tankPosition.rot, // Include tank rotation so turret is rendered correctly
+					aVeloc: tankPosition.aVeloc,
+					lVeloc: tankPosition.lVeloc
 				};
 
 				// Store last position broadcasted

@@ -92,6 +92,8 @@ io.sockets.on('connection', function (socket) {
 				pos: message.pos,
 				rot: message.rot,
 				tRot: message.tRot,
+				aVeloc: message.aVeloc,
+				lVeloc: message.lVeloc,
 				lastMove: (new Date()).getTime(),
 				ip: ip
 			};
@@ -101,7 +103,9 @@ io.sockets.on('connection', function (socket) {
 				name: message.name,
 				pos: message.pos,
 				rot: message.rot,
-				tRot: message.tRot
+				tRot: message.tRot,
+				aVeloc: message.aVeloc,
+				lVeloc: message.lVeloc
 			});
 		});
 	});
@@ -181,7 +185,9 @@ io.sockets.on('connection', function (socket) {
 				name: name,
 				pos: newPos,
 				rot: [0, 0, 0],
-				tRot: 0
+				tRot: 0,
+				aVeloc: [0, 0, 0],
+				lVeloc: [0, 0, 0]
 			};
 			
 			players[name].pos = newPos;
@@ -233,6 +239,8 @@ io.sockets.on('connection', function (socket) {
 				player.pos = message.pos;
 				player.rot = message.rot;
 				player.tRot = message.tRot;
+				player.aVeloc = message.aVeloc;
+				player.lVeloc = message.lVeloc;
 				player.lastMove = message.time;
 			
 				// Notify players
@@ -240,7 +248,9 @@ io.sockets.on('connection', function (socket) {
 					name: name,
 					pos: message.pos,
 					rot: message.rot,
-					tRot: message.tRot
+					tRot: message.tRot,
+					aVeloc: message.aVeloc,
+					lVeloc: message.lVeloc
 				});
 			}
 			else {

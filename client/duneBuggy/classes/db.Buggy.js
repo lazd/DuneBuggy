@@ -5,9 +5,20 @@ db.Buggy = new Class({
 		return this.turret;
 	},
 
-	setPosition: function (position, rotation, tRot) {
-		// Set position
-		this.root.position.set(position[0], position[1], position[2]);
+	setPosition: function (position, rotation, tRot, aVeloc, lVeloc, interpolate) {
+		var posInterpolation = 0.05;
+		var rotInerpolation = 0.50;
+		
+		if (interpolate) {
+			// Interpolate position by adding the difference of the calulcated position and the position sent by the authoritative client
+			var newPositionVec = new THREE.Vector3(position[0], position[1], position[2]);
+			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));			
+			this.root.position.addSelf(posErrorVec);
+		}
+		else {
+			// Directly set position
+			this.root.position.set(position[0], position[1], position[2]);
+		}
 
 		// Set rotation
 		if (rotation)
@@ -16,6 +27,12 @@ db.Buggy = new Class({
 		// Set turret rotation
 		if (tRot !== undefined)
 			this.turret.rotation.y = tRot;
+			
+		if (aVeloc !== undefined && this.root.setAngularVelocity)
+			this.root.setAngularVelocity({ x: aVeloc[0], y: aVeloc[1], z: aVeloc[2] });
+			
+		if (lVeloc !== undefined && this.root.setLinearVelocity)
+			this.root.setLinearVelocity({ x: lVeloc[0], y: lVeloc[1], z: lVeloc[2] });
 			
 		// Tell the physics engine to update our position
 		this.root.__dirtyPosition = true;
@@ -43,23 +60,24 @@ db.Buggy = new Class({
 		};
 		
 		var tuning = {};
-		tuning['max_power'] = 600; // was 1400;
-		tuning['boost_power'] = 1200;
+		tuning['max_power'] = 600;
+		tuning['boost_power'] = 1400;
+		tuning['brake_power'] = 80;
 		tuning['mass'] = 12;
 		
 		var k = 0.95; // almost full damping
 		
-		tuning['suspension_stiffness'] = 25;
+		tuning['suspension_stiffness'] = 30;
 		tuning['suspension_damping'] = k * 2.0 * Math.sqrt(tuning['suspension_stiffness']);
 		tuning['suspension_compression'] = k * 2.0 * Math.sqrt(tuning['suspension_stiffness']);
 		tuning['max_suspension_travel_cm'] = 350;
-		tuning['friction_slip'] = 10; // was 0.8?
-		tuning['max_suspension_force'] = 13000;
+		tuning['friction_slip'] = 0.8; // was 0.8?
+		tuning['max_suspension_force'] = 14000;
 		
 		tuning['wheel_radius'] = 5.5;
 		tuning['suspension_rest_length'] = 0.400;
 		
-		tuning['steering_increment'] = 1/50;
+		tuning['steering_increment'] = 1/25;
 		tuning['max_steering_radius'] = 0.25;
 		
 		var axle_width = 11.5;
@@ -68,8 +86,8 @@ db.Buggy = new Class({
 		
 		var box_height = 14;
 		
-		var wheel_y_front = -0.5-box_height/6;
-		var wheel_y_back = -0.25-box_height/6;
+		var wheel_y_front = -box_height/5; //-0.5-box_height/6;
+		var wheel_y_back = -box_height/5; //-0.25-box_height/6
 		
 		var tuning_frontWheel = {
 			suspension_stiffness: tuning['suspension_stiffness'],
@@ -101,52 +119,63 @@ db.Buggy = new Class({
 					this.turret = new THREE.Mesh(turret, material);
 					this.turret.position.z = -4.5;
 					
+					var mesh = this.root = new Physijs.ConvexMesh(
+						car,
+						material,
+						tuning['mass']
+					);
+					
+					this.root.add(this.turret);
+
+					if (options.position)
+						mesh.position.copy(options.position);
+					else
+						mesh.position.y = 145;
+					
+					mesh.castShadow = mesh.receiveShadow = true;
+				
+				
+					var vehicle = this.vehicle = new Physijs.Vehicle(mesh, new Physijs.VehicleTuning(
+						tuning['suspension_stiffness'],
+						tuning['suspension_compression'],
+						tuning['suspension_damping'],
+						tuning['max_suspension_travel_cm'],
+						tuning['friction_slip'],
+						tuning['max_suspension_force']
+					));
+				
+					//mesh.useQuaternion = true;
+				
+					options.game.scene.add( vehicle );
+				
+					for ( var i = 0; i < 4; i++ ) {
+						var leftWheel = i % 2 === 0;
+						var frontWheel = i <= 1;
+					
+						// TODO: flip wheel for left/right sides
+						vehicle.addWheel(
+							wheel,
+							material,
+							/* connection_point */ new THREE.Vector3(
+									leftWheel ? -axle_width : axle_width,
+									frontWheel ? wheel_y_front : wheel_y_back,
+									frontWheel ? wheel_z_front : wheel_z_back
+							),
+							/* wheel_direction */ new THREE.Vector3( 0, -1, 0 ),
+							/* wheel_axle */ new THREE.Vector3( -1, 0, 0 ),
+							/* suspension_rest_length */ tuning['suspension_rest_length'],
+							/* wheel_radius */ tuning['wheel_radius'],
+							/* is_front_wheel */ frontWheel,
+							/* tuning */ !frontWheel ? tuning_frontWheel : tuning_backWheel
+						);
+					}
+					
+					
 					if (options.alliance === 'self') {
 					
-						/*
-						var mesh = this.root = new Physijs.BoxMesh(
-							new THREE.CubeGeometry(
-								axle_width+5, // width
-								box_height, // height,
-								32 // depth: 45 fits length of buggy base
-							),
-							new THREE.MeshBasicMaterial({
-								color: 0xFF0000,
-								opacity: 0.5,
-								visible: true // Show the bounding box
-							}),
-							tuning['mass']
-						);
-						*/
-					
-						var mesh = this.root = new Physijs.ConvexMesh(
-							car,
-							material,
-							tuning['mass']
-						);
-						
-						this.root.add(this.turret);
-
-						if (options.position)
-							mesh.position.copy(options.position);
-						else
-							mesh.position.y = 145;
-						
-						mesh.castShadow = mesh.receiveShadow = true;
-					
-					
-						var vehicle = this.vehicle = new Physijs.Vehicle(mesh, new Physijs.VehicleTuning(
-							tuning['suspension_stiffness'],
-							tuning['suspension_compression'],
-							tuning['suspension_damping'],
-							tuning['max_suspension_travel_cm'],
-							tuning['friction_slip'],
-							tuning['max_suspension_force']
-						));
-					
-						//mesh.useQuaternion = true;
-					
-						options.game.scene.add( vehicle );
+						mesh.addEventListener('collision', function() {
+							console.log(arguments);
+						});
 					
 						options.game.scene.addEventListener(
 							'update',
@@ -197,8 +226,8 @@ db.Buggy = new Class({
 										vehicle.applyEngineForce(input.force);
 									} else if ( input.power === false ) {
 										input.force = 0;
-										vehicle.setBrake( 120, 2 );
-										vehicle.setBrake( 120, 3 );
+										vehicle.setBrake( tuning['brake_power'], 2 );
+										vehicle.setBrake( tuning['brake_power'], 3 );
 									} else {
 										input.force = 0;
 										vehicle.applyEngineForce( 0 );
@@ -209,51 +238,6 @@ db.Buggy = new Class({
 								}
 							}
 						);
-					
-					
-						for ( var i = 0; i < 4; i++ ) {
-							var leftWheel = i % 2 === 0;
-							var frontWheel = i > 1;
-						
-							// TODO: flip wheel for left/right sides
-							vehicle.addWheel(
-								wheel,
-								material,
-								/* connection_point */ new THREE.Vector3(
-										leftWheel ? -axle_width : axle_width,
-										frontWheel ? wheel_y_front : wheel_y_back,
-										frontWheel ? wheel_z_back : wheel_z_front
-								),
-								/* wheel_direction */ new THREE.Vector3( 0, -1, 0 ),
-								/* wheel_axle */ new THREE.Vector3( -1, 0, 0 ),
-								/* suspension_rest_length */ tuning['suspension_rest_length'],
-								/* wheel_radius */ tuning['wheel_radius'],
-								/* is_front_wheel */ frontWheel,
-								/* tuning */ !frontWheel ? tuning_frontWheel : tuning_backWheel
-							);
-						}
-					}
-					else {
-					
-						this.carMesh = new THREE.Mesh(car, material);
-						this.carMesh.add(this.turret);
-					
-						this.root.add(this.carMesh);
-					
-						this.root.position.y = 145;
-						for ( var i = 0; i < 4; i++ ) {
-							var leftWheel = i % 2 === 0;
-							var frontWheel = i > 1;
-						
-							var wheelMesh = new THREE.Mesh(wheel, material);
-							wheelMesh.position.set(
-								leftWheel ? -axle_width : axle_width,
-								frontWheel ? wheel_y_front+0.5 : wheel_y_back+0.5,
-								frontWheel ? wheel_z_back : wheel_z_front
-							);
-							
-							this.root.add(wheelMesh);
-						}
 					}
 					
 					if (options.callback)
@@ -323,9 +307,14 @@ db.Buggy = new Class({
 		var tankRotation = (root && root.rotation) || new THREE.Vector3();
 		var turretRotation = (turret && turret.rotation) || new THREE.Vector3();
 
+		var linearVelocity = (root.getLinearVelocity && root.getLinearVelocity()) || new THREE.Vector3();
+		var angularVelocity = (root.getAngularVelocity && root.getAngularVelocity()) || new THREE.Vector3();
+		
 		return {
 			pos: [tankPosition.x, tankPosition.y, tankPosition.z],
 			rot: [tankRotation.x, tankRotation.y, tankRotation.z],
+			aVeloc: [angularVelocity.x, angularVelocity.y, angularVelocity.z],
+			lVeloc: [linearVelocity.x, linearVelocity.y, linearVelocity.z],
 			tRot: turretRotation.y
 		};
 	}

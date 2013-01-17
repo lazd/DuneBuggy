@@ -291,7 +291,7 @@ db.DuneBuggyGame = new Class({
 			this.tank.reset(message.pos, message.rot, message.tRot);
 		}
 		else {
-			if (!this.enemies.do(message.name, 'setPosition', [message.pos, message.rot, message.rot+message.tRot])) {
+			if (!this.enemies.do(message.name, 'setPosition', [message.pos, message.rot, message.rot+message.tRot, message.aVeloc, message.lVeloc, true])) {
 				this.enemies.add(message);
 			}
 		}
