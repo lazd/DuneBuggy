@@ -70,10 +70,17 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	if (keyboard.pressed(this.keyMap.keyStateUp) || keyboard.pressed(this.keyMap.keyStateUp2))
 		this.controls.power = true;
 	else
-		this.controls.power = null;
-
-	if (keyboard.pressed(this.keyMap.keyStateDown) || keyboard.pressed(this.keyMap.keyStateDown2) || keyboard.pressed(this.keyMap.handBrake))
 		this.controls.power = false;
+
+	if (keyboard.pressed(this.keyMap.keyStateDown) || keyboard.pressed(this.keyMap.keyStateDown2))
+		this.controls.reverse = true;
+	else
+		this.controls.reverse = false;
+		
+	if (keyboard.pressed(this.keyMap.handBrake))
+		this.controls.brake = true;
+	else
+		this.controls.brake = false;
 	
 	this.controls.fire = keyboard.pressed(this.keyMap.keyStateFire) || mouse.buttons().left;
 	
