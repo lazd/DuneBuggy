@@ -29,6 +29,7 @@ db.CameraControls = new Class({
 		var tankPosition = tankMesh.position;
 		var tankRotation = tankMesh.rotation.y;
 		var tankRotation = (tankMesh.worldY || 0)+Math.PI;
+		//var tankRotation = (tankMesh.rotation.y || 0)+Math.PI;
 		var turretRotation = tank.getTurret().rotation.y + tankRotation;
 		
 		
@@ -48,45 +49,16 @@ db.CameraControls = new Class({
 			
 			var camera = this.options.camera;
 			if (this.options.chase.follow == 'tank') {
+				// Update the matrix before we calculate
+				tankMesh.updateMatrixWorld();
+
+				var newCameraPosition = tankMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,80,-this.options.chase.trailZ));
 				
+				// Fixed Y position
+				newCameraPosition.y = this.options.camera.position.y;
 				
-				// Using rotation straight up
-				// var rotation = tankMesh.rotation.clone();
-				// console.log('Y: ', Math.toDegrees(rotation.y));
-				
-				
-				/*
-				// Using matrix rotation world
-				var matrix = tankMesh.matrixRotationWorld.clone();
-				matrix.extractRotation(tankMesh.matrixWorld);
-				
-				var rotation = new THREE.Vector3().setEulerFromRotationMatrix(matrix);
-				//console.log('Y: ', Math.toDegrees(rotation.y));
-				*/
-					
-				
-				// Using quaternion
-				//var rotation = new THREE.Vector3().setEulerFromQuaternion(tankMesh.quaternion);
-				//console.log('Y: ', Math.toDegrees(rotation.y));
-				
-				/*
-				camera.matrixRotationWorld.extractRotation(tankMesh.matrixWorld);
-				
-				camera.matrixRotationWorld.rotateY(Math.PI);
-				//camera.matrixRotationWorld.makeRotationX(0);
-				//camera.matrixRotationWorld.makeRotationZ(0);
-				
-				camera.rotation.setEulerFromRotationMatrix(camera.matrixRotationWorld);
-				
-				camera.updateMatrix();
-				camera.matrixRotationWorld.multiplyVector3(new THREE.Vector3(0, 0, 1));
-				
-				camera.position.x = tankPosition.x;
-				camera.position.z = tankPosition.z;
-				*/
-				
-				camera.position.x = tankPosition.x+Math.sin(tankRotation)*this.options.chase.trailX;
-				camera.position.z = tankPosition.z+Math.cos(tankRotation)*this.options.chase.trailZ;
+				// Set camera position
+				camera.position.copy(newCameraPosition);
 			}
 			else if (this.options.chase.follow == 'turret') {
 				this.options.camera.position.x = tankPosition.x+Math.sin(turretRotation)*this.options.chase.trailX;
