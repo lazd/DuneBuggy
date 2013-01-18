@@ -25,12 +25,9 @@ db.CameraControls = new Class({
 	update: function() {
 		var tank = this.options.tank;
 		var tankMesh = tank.getRoot();
+		var turretMesh = tank.getTurret();
 		
 		var tankPosition = tankMesh.position;
-		var tankRotation = tankMesh.rotation.y;
-		var tankRotation = (tankMesh.worldY || 0)+Math.PI;
-		//var tankRotation = (tankMesh.rotation.y || 0)+Math.PI;
-		var turretRotation = tank.getTurret().rotation.y + tankRotation;
 		
 		
 		// Follow tank with camera
@@ -40,19 +37,19 @@ db.CameraControls = new Class({
 			this.options.camera.position.z = tankPosition.z;
 			
 			// Rotate camera with tank
-			if (this.options.overhead.rotate)
-		    	this.options.camera.rotation.y = tankRotation;
+			if (this.options.overhead.rotate) {
+				// TODO: Get tank rotation here!
+			}
 		}
 		else if (this.options.type == 'chase') {
 			this.options.camera.position.y = tankPosition.y+this.options.chase.height;
-			
 			
 			var camera = this.options.camera;
 			if (this.options.chase.follow == 'tank') {
 				// Update the matrix before we calculate
 				tankMesh.updateMatrixWorld();
 
-				var newCameraPosition = tankMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,80,-this.options.chase.trailZ));
+				var newCameraPosition = tankMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ));
 				
 				// Fixed Y position
 				newCameraPosition.y = this.options.camera.position.y;
@@ -61,8 +58,17 @@ db.CameraControls = new Class({
 				camera.position.copy(newCameraPosition);
 			}
 			else if (this.options.chase.follow == 'turret') {
-				this.options.camera.position.x = tankPosition.x+Math.sin(turretRotation)*this.options.chase.trailX;
-				this.options.camera.position.z = tankPosition.z+Math.cos(turretRotation)*this.options.chase.trailZ;
+				// Update the matrix before we calculate
+				tankMesh.updateMatrixWorld();
+				turretMesh.updateMatrixWorld();
+
+				var newCameraPosition = turretMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ));
+				
+				// Fixed Y position, may not be ideal for aiming
+				newCameraPosition.y = this.options.camera.position.y;
+				
+				// Set camera position
+				camera.position.copy(newCameraPosition);
 			}
 		}
 	
