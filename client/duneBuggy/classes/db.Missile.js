@@ -32,16 +32,16 @@
 				
 				// Set initial position
 				this.root.position.copy(options.position);
-				this.root.position.y = options.position.y+22;
+				this.root.position.y = options.position.y+25;
 				
-				this.root.rotation.set(options.rotation.x+Math.PI/2, options.rotation.y, options.rotation.z);
+				this.root.rotation.set(options.rotation.x, options.rotation.y, options.rotation.z);
 				
 				this.root.__dirtyPosition = true;
 				this.root.__dirtyRotation = true;
 
 				this.game.scene.add(this.root);
 				
-				this.root.setLinearVelocity({x: 0, y: 0, z: 100});
+				this.root.setLinearVelocity({x: 0, y: 100, z: 0});
 			}.bind(this));
 		
 			// Store start time
