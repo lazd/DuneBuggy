@@ -528,9 +528,9 @@ window.Physijs = (function() {
 					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XZY'); // Weird and wobbly, shit is whack
 					
 					// Hack it
-					object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XZY'); // Weird and wobbly, shit is whack
-					
-					object.worldY = object.rotation.y;
+					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XZY'); // Weird and wobbly, shit is whack
+					// 
+					// object.worldY = object.rotation.y;
 					
 					object.rotation = getEulerXYZFromQuaternion(
 						data[ offset + 4 ],

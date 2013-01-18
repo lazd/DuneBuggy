@@ -19,6 +19,8 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	var mouse = db.Mouse;
 	
 	var tankPosition = this.getRoot().position;
+	
+	// TODO: Reliably get tank rotation here or find another way to position the turret
 	var tankRotation = this.getRoot().rotation.y+Math.PI/2;
 	
 	var turretRotation = this.getTurret().rotation.y;
