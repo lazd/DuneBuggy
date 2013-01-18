@@ -52,7 +52,7 @@ function getRandomCoord() {
 	return Math.random()*mapSize - mapSize/2;
 }
 function getRandomPosition() {
-	return [getRandomCoord(), getRandomCoord()];
+	return [getRandomCoord(), 140, getRandomCoord()];
 }
 
 io.sockets.on('connection', function (socket) {
@@ -85,11 +85,13 @@ io.sockets.on('connection', function (socket) {
 		// Send the map to the players
 		socket.emit('map', mapItems);
 		
+		var pos = getRandomPosition();
+		
 	    socket.set('name', message.name, function() {
 			// Store client info
 			players[message.name] = {
 				name: message.name,
-				pos: message.pos,
+				pos: pos,
 				rot: message.rot,
 				tRot: message.tRot,
 				aVeloc: message.aVeloc,
@@ -97,11 +99,22 @@ io.sockets.on('connection', function (socket) {
 				lastMove: (new Date()).getTime(),
 				ip: ip
 			};
+			
+			var packet = {
+				name: message.name,
+				pos: pos,
+				rot: [0, 0, 0],
+				tRot: 0,
+				aVeloc: [0, 0, 0],
+				lVeloc: [0, 0, 0]
+			};
+			
+			socket.emit('move', packet);
 
 			// Notify players of new challenger
 			socket.broadcast.emit('join', {
 				name: message.name,
-				pos: message.pos,
+				pos: pos,
 				rot: message.rot,
 				tRot: message.tRot,
 				aVeloc: message.aVeloc,
