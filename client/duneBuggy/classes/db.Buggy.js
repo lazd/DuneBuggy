@@ -112,6 +112,8 @@ db.Buggy = new Class({
 			loader.load( "duneBuggy/models/buggy_turret.js", function( turret ) {
 				loader.load( "duneBuggy/models/buggy_wheel.js", function( wheel ) {
 					materials[0].map.flipY = false;
+					materials[0].side = THREE.DoubleSide; // make it so we can't see through the bottom
+					
 					car.doubleSided = true;
 					
 					var material = new THREE.MeshFaceMaterial(materials);
@@ -172,16 +174,17 @@ db.Buggy = new Class({
 					
 					
 					if (options.alliance === 'self') {
-					
-						mesh.addEventListener('collision', function() {
-							console.log(arguments);
+						/*
+						mesh.addEventListener('collision', function(mesh) {
+							console.log('Buggy collided: ', mesh);
 						});
-					
+						*/
+						
 						options.game.scene.addEventListener(
 							'update',
 							function() {
 								if ( input && vehicle ) {
-									if (input.reset) {
+									if (input.reset || mesh.position.y < -100) {
 										//mesh.position.y = mesh.position.y + 5;
 										//mesh.position.set(769.3665771484375, 146.9954833984375, 3229.85205078125);
 										mesh.position.set(0, 120, 0);
