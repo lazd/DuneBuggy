@@ -32,15 +32,31 @@ db.Game = new Class({
 			antialias: true // to get smoother output
 		});
 		
-		this.renderer.setClearColorHex(0x000000);
-
+    	// Set sky color
+		this.renderer.setClearColorHex(0x87CEEB);
+		
+		
 		// Create a camera
 		this.camera = new THREE.PerspectiveCamera(35, 1, 1, 10000);
+		
+		// Configure shadow
+		this.renderer.shadowMapEnabled = true;
+		this.renderer.shadowMapSoft = true;
+
+		// What to do here?
+		// this.renderer.shadowCameraNear = 3;
+		// this.renderer.shadowCameraFar = this.camera.far;
+		// this.renderer.shadowCameraFov = 50;
+		// 
+		// this.renderer.shadowMapBias = 0.0039;
+		// this.renderer.shadowMapDarkness = 0.5;
+		// this.renderer.shadowMapWidth = 1024;
+		// this.renderer.shadowMapHeight = 1024;
 		
 		// Create the scene
 		//this.scene = scene = new THREE.Scene();
 		this.scene = scene = new Physijs.Scene;
-		this.scene.setGravity(new THREE.Vector3( 0, -150, 0 )); //-120
+		this.scene.setGravity(new THREE.Vector3(0, -175, 0)); // -150 is more moon-like, -175 feels more realistic
 		this.scene.add(this.camera);
 
 		// Add listeners
