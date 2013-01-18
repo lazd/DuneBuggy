@@ -29,7 +29,6 @@ db.CameraControls = new Class({
 		
 		var tankPosition = tankMesh.position;
 		
-		
 		// Follow tank with camera
 		if (this.options.type == 'overhead') {
 			this.options.camera.position.x = tankPosition.x;

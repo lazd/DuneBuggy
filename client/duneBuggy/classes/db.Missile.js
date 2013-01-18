@@ -12,6 +12,9 @@
 				position: new THREE.Vector3(0, 0, 0),
 				rotation: new THREE.Vector3(1, 1, 1)
 			}, options);
+	
+			// missile "feel" parameters
+			this.MODEL_ROTATION = Math.PI;
 			
 			var missileColor = options.type == 'friend' ? db.config.colors.friend : db.config.colors.enemy;
 	
@@ -27,21 +30,18 @@
 				this.root = new Physijs.CylinderMesh(geometry, material, 5);
 				this.root.scale.set(db.config.size.missile, db.config.size.missile, db.config.size.missile);
 				
+				// handle this this.root.rotation.y = this.MODEL_ROTATION;
+
 				this.root.castShadow = true;
 				this.root.receiveShadow = true;
 				
 				// Set initial position
 				this.root.position.copy(options.position);
-				this.root.position.y = options.position.y+25;
-				
-				this.root.rotation.set(options.rotation.x, options.rotation.y, options.rotation.z);
-				
-				this.root.__dirtyPosition = true;
-				this.root.__dirtyRotation = true;
+				this.root.rotation.copy(options.rotation);
 
 				this.game.scene.add(this.root);
 				
-				this.root.setLinearVelocity({x: 0, y: 100, z: 0});
+				this.root.setLinearVelocity({x: 150, y: 0, z: 150});
 			}.bind(this));
 		
 			// Store start time
@@ -49,8 +49,6 @@
 		},
 	
 		setPosition: function(position, rotation) {
-			console.log('setting missile position');
-			
 			// position
 			this.root.position.x = position[0];
 			this.root.position.y = position[1];
