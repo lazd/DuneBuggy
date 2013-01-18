@@ -43,7 +43,7 @@ db.Game = new Class({
 		this.renderer.shadowMapEnabled = true;
 		this.renderer.shadowMapSoft = true;
 
-		// What to do here?
+		// TODO: Tweak these values accordingly
 		// this.renderer.shadowCameraNear = 3;
 		// this.renderer.shadowCameraFar = this.camera.far;
 		// this.renderer.shadowCameraFov = 50;

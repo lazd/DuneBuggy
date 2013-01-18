@@ -239,12 +239,14 @@ db.DuneBuggyGame = new Class({
 		Environment setup
 		******************/
 		// Ambient light
-		this.ambientLight = new THREE.AmbientLight(0xCCCCCC);
+		this.ambientLight = new THREE.AmbientLight(0xEEEEEE); // TODO: Tweak these values
 		this.scene.add(this.ambientLight);
 	
 		// Directional light
-		this.directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-		this.directionalLight.position.set(50, 150, 150);
+		this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 2); // TODO: Tweak these values
+		this.directionalLight.position.set(2200, 1200, -4000); // TODO: Tweak these values
+		this.directionalLight.castShadow = true;
+		// this.directionalLight.shadowCameraVisible = true; // For debugging
 		this.scene.add(this.directionalLight);
 		
 		// Ground plane
