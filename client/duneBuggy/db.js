@@ -1,5 +1,5 @@
 /*
-DuneBuggy - A multiplayer dune buggy battle game for the web  
+DuneBuggy - A multiplayer dune buggy battle game for the web
 Copyright (C) 2012 Lawrence Davis
 
 DuneBuggy is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -11,10 +11,15 @@ You should have received a copy of the GNU General Public License along with thi
 
 var db = {
 	maps: {},
-	options: {
-		camera: 'chase'
-	},
 	config: {
+		cameraType: 'chase',
+		cameraFollow: 'turret',
+		game: {
+			startY: 140
+		},
+		physics: {
+			gravity: -175 // -150 is more moon-like, -175 feels more realistic
+		},
 		comm: {
 			server: 'home.lazd.net:1935', // hostname:port (without http://)
 			interval: 15
@@ -23,31 +28,26 @@ var db = {
 			friend: 0x886A00,
 			enemy: 0x880000
 		},
-		tracks: {
-			fadeTime: 5000,
-			distance: 5
-		},
 		sound: {
 			silentDistance: 1500
 		},
-		tank: {
-			maxSpeed: 75,
-			maxReverseSpeed: -75,
-            
-			backDeceleration: 1200,
-			frontDeceleration: 750,
-	        
-			maxWheelRotation: 1,
-			wheelAngularAcceleration: 3.0,
-			wheelAngularDecceleration: 3.5,
-			steeringRadiusRatio: 0.040,
-            
-			initialRotation: 0,
-			initialTurretRotation: Math.PI/2,
-	        
-			modelRotation: Math.PI/2,
+		buggy: {
+			max_power: 600,
+			boost_power: 1400,
+			brake_power: 50,
+			mass: 12,
 			
-			mass: 100000
+			k: 0.95, // almost full damping
+			suspension_stiffness: 30,
+			max_suspension_travel_cm: 350,
+			friction_slip: 0.8,
+			max_suspension_force: 14000,
+			suspension_rest_length: 0.400,
+
+			wheel_radius: 5.5,
+
+			steering_increment: 1/25,
+			max_steering_radius: 0.25
 		},
 		weapons: {
 			bullet: {
@@ -55,7 +55,7 @@ var db = {
 				time: 2000,
 				speed: 350,
 				damage: 10,
-				hitDistance: 15,
+				mass: 0.1,
 				sound: {
 					file: 'fire_bullet',
 					volume: 0.85
@@ -65,7 +65,7 @@ var db = {
 				interval: 1000,
 				time: 3000,
 				damage: 75,
-				hitDistance: 8, // needs to be based on current speed of missile
+				mass: 5,
 				sound: {
 					file: 'fire_missile',
 					volume: 0.35
@@ -80,6 +80,13 @@ var db = {
 			wall: 10,
 			ground: 10
 		},
+		models: [
+			'buggy_body',
+			'buggy_turret',
+			'buggy_wheel',
+			'terrain',
+			'missilePhoenix'
+		],
 		sounds: {
 			fire_bullet: "duneBuggy/sounds/fire_bullet.ogg",
 			fire_missile: "duneBuggy/sounds/fire_missile.ogg",
@@ -91,3 +98,7 @@ var db = {
 		}
 	}
 };
+
+
+db.config.buggy.suspension_damping = db.config.buggy['k'] * 2.0 * Math.sqrt(db.config.buggy.suspension_stiffness);
+db.config.buggy.suspension_compression = db.config.buggy['k'] * 2.0 * Math.sqrt(db.config.buggy.suspension_stiffness);
