@@ -1,9 +1,9 @@
 (function() {
 	// internal helper variables
 	var bulletTexture = {
-		width: 4/5,
-		height: 4/5,
-		depth: 8/5
+		width: 0.5,
+		height: 0.5,
+		depth: 1
 	};
 	
 	var friendBulletMaterial = new THREE.MeshBasicMaterial({
@@ -29,23 +29,26 @@
 				rotation: new THREE.Vector3(0, 0, 0)
 			}, options);
 			
-			var Y_OFFSET = 8.1;
-		
 			var material = options.type == 'friend' ? friendBulletMaterial : enemyBulletMaterial;
 		
 			// create the mesh
-			this.root = new Physijs.BoxMesh(bulletGeometry, material);
+			this.root = new Physijs.BoxMesh(bulletGeometry, material, db.config.weapons.bullet.mass);
 		
 			// Set initial position
 			this.root.position.copy(options.position);
 			this.root.rotation.copy(options.rotation);
-
-			// I have no clue how to find the direction and give it velocity
-			var velocity = options.rotation.clone().multiplyScalar(1000);
-			this.root.setLinearVelocity(velocity);
+			
+			// Temporary
+			this.root.position.y += 25;
 				
 			// Store start time
 			this.time = new Date().getTime();
+		},
+		init: function() {
+			this.inherited(arguments);
+			
+			// Temporary
+			this.root.setLinearVelocity({ x: 0, y: 100, z: 0}); // Must set after added to scene
 		}
 	});
 }());
