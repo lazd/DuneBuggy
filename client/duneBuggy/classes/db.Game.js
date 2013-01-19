@@ -1,11 +1,17 @@
 db.Game = new Class({
+	extend: EventEmitter,
+	
 	construct: function(options) {
-		this.options = options;
+		this.options = jQuery.extend({}, this.defaults, options);
 		
 		this._doRender = false;
 		this._lastRender = 0;
 		
+		// Store functions hooked to render
 		this._hookedFuncs = [];
+		
+		// Store laoded models
+		this.models = {};
 		
 		// Bind callback functions
 		this.bind(this.animate);
@@ -24,6 +30,9 @@ db.Game = new Class({
 		// Projector
 		this.projector = new THREE.Projector();
 		
+		// Create loader
+		this.loader = new THREE.JSONLoader();
+		
 		/******************
 		Create rendering instances
 		******************/
@@ -33,8 +42,7 @@ db.Game = new Class({
 		});
 		
     	// Set sky color
-		this.renderer.setClearColorHex(0x87CEEB);
-		
+		this.renderer.setClearColorHex(0x87CCEB);
 		
 		// Create a camera
 		this.camera = new THREE.PerspectiveCamera(35, 1, 1, 10000);
@@ -43,20 +51,8 @@ db.Game = new Class({
 		this.renderer.shadowMapEnabled = true;
 		this.renderer.shadowMapSoft = true;
 
-		// TODO: Tweak these values accordingly
-		// this.renderer.shadowCameraNear = 3;
-		// this.renderer.shadowCameraFar = this.camera.far;
-		// this.renderer.shadowCameraFov = 50;
-		// 
-		// this.renderer.shadowMapBias = 0.0039;
-		// this.renderer.shadowMapDarkness = 0.5;
-		// this.renderer.shadowMapWidth = 1024;
-		// this.renderer.shadowMapHeight = 1024;
-		
 		// Create the scene
-		//this.scene = scene = new THREE.Scene();
 		this.scene = scene = new Physijs.Scene;
-		this.scene.setGravity(new THREE.Vector3(0, -175, 0)); // -150 is more moon-like, -175 feels more realistic
 		this.scene.add(this.camera);
 
 		// Add listeners
@@ -105,6 +101,18 @@ db.Game = new Class({
 				physics_stats.update();
 			}
 		);
+		
+		var that = this;
+		this.physicsStarted = false;
+		this.scene.addEventListener(
+			'ready', 
+			function() {
+				that.physicsStarted = true;
+				that.tryInitialize();
+			}
+		);
+		
+		this.loadModels();
 	},
 	
 	isFullScreen: function() {
@@ -295,5 +303,50 @@ db.Game = new Class({
 		startVector.z + t * dirVector.z);
 		
 		return goalVector;
+	},
+	
+	tryInitialize: function() {
+		if (this.modelsLoaded && this.physicsStarted && !this.initialized) {
+			console.log('Physics engine started!');
+			if (typeof this.initialize === 'function')
+				this.initialize();
+		}
+	},
+	
+	loadModels: function() {
+		var toLoad = this.options.models.length;
+		if (!toLoad) {
+			this.tryInitialize();
+			return;
+		}
+		
+		// Hold models
+		var models = this.models;
+		
+		var that = this;
+		var loaded = function(name, geometry, materials) {
+			// Store model and materials
+			models[name] = {
+				geometry: geometry,
+				materials: materials
+			};
+			
+			// Track progress
+			toLoad--;
+			if (toLoad === 0) {
+				console.log('Models loaded!');
+				that.trigger('models:loaded');
+				that.modelsLoaded = true;
+			}
+			else {
+				var pct = (that.options.models.length-toLoad)/that.options.models.length*100;
+				console.log('Loading: '+pct.toFixed(0)+'%');
+				that.trigger('models:loading', pct);
+			}
+		};
+		
+		this.options.models.forEach(function(name, index) {
+			that.loader.load('duneBuggy/models/'+name+'.js', loaded.bind(that, name));
+		});
 	}
 });
