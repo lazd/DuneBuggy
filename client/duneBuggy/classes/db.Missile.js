@@ -13,39 +13,39 @@
 				rotation: new THREE.Vector3(1, 1, 1)
 			}, options);
 	
-			// missile "feel" parameters
-			this.MODEL_ROTATION = Math.PI;
-			
+			// Set missile color based on alliance
 			var missileColor = options.type == 'friend' ? db.config.colors.friend : db.config.colors.enemy;
 	
 			// Load model
-			var loader = new THREE.JSONLoader();
-			loader.load("duneBuggy/models/missilePhoenix.js", function(geometry) {
-				this.missileGeometry = geometry;
-		
-				// geometry.materials[0] = new THREE.MeshLambertMaterial({ color: missileColor, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
-				var material = new THREE.MeshPhongMaterial({ color: missileColor, ambient: 0x050505, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
-		
-				// Body
-				this.root = new Physijs.CylinderMesh(geometry, material, 5);
-				this.root.scale.set(db.config.size.missile, db.config.size.missile, db.config.size.missile);
-				
-				// handle this this.root.rotation.y = this.MODEL_ROTATION;
+			var geometry = this.game.models.missilePhoenix.geometry;
+			
+			this.missileGeometry = geometry;
+	
+			// geometry.materials[0] = new THREE.MeshLambertMaterial({ color: missileColor, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
+			var material = new THREE.MeshPhongMaterial({ color: missileColor, ambient: 0x050505, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
+	
+			// Body
+			this.root = new Physijs.CylinderMesh(geometry, material, db.config.weapons.missile.mass);
+			this.root.scale.set(db.config.size.missile, db.config.size.missile, db.config.size.missile);
+			
+			this.root.castShadow = true;
+			this.root.receiveShadow = true;
+			
+			// Set initial position
+			this.root.position.copy(options.position);
+			this.root.rotation.copy(options.rotation);
 
-				this.root.castShadow = true;
-				this.root.receiveShadow = true;
-				
-				// Set initial position
-				this.root.position.copy(options.position);
-				this.root.rotation.copy(options.rotation);
-
-				this.game.scene.add(this.root);
-				
-				this.root.setLinearVelocity({x: 150, y: 0, z: 150});
-			}.bind(this));
-		
+			// Temporary
+			this.root.position.y += 25;
+			
 			// Store start time
 			this.time = new Date().getTime();
+		},
+		init: function() {
+			this.inherited(arguments);
+			
+			// Temporary
+			this.root.setLinearVelocity({x: 0, y: 100, z: 0}); // must set after added to scene
 		},
 	
 		setPosition: function(position, rotation) {
