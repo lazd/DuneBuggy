@@ -21,7 +21,8 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	var tankPosition = this.getRoot().position;
 	
 	// TODO: Reliably get tank rotation here or find another way to position the turret
-	var tankRotation = this.getRoot().rotation.y+Math.PI/2;
+	// var tankRotation = this.getRoot().rotation.y+Math.PI/2;
+	var tankRotation = this.getRoot().worldY+Math.PI/2;
 	
 	var turretRotation = this.getTurret().rotation.y;
 	
@@ -70,9 +71,9 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		this.controls.direction = null;
 		
 	if (keyboard.pressed(this.keyMap.keyStateUp) || keyboard.pressed(this.keyMap.keyStateUp2))
-		this.controls.power = true;
+		this.controls.forward = true;
 	else
-		this.controls.power = false;
+		this.controls.forward = false;
 
 	if (keyboard.pressed(this.keyMap.keyStateDown) || keyboard.pressed(this.keyMap.keyStateDown2))
 		this.controls.reverse = true;
