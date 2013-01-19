@@ -1,22 +1,11 @@
 db.DuneBuggyGame = new Class({
 	toString: 'DuneBuggyGame',
 	extend: db.Game,
-
-	defaults: {
-		cameraType: 'chase',
-		cameraFollow: 'turret',
-		debug: {
-			bulletCollisions: false
-		}
-	},
+	
+	defaults: $.extend({}, db.config),
 
 	construct: function(options) {
-		this.options = jQuery.extend({}, this.defaults, options);
-		
 		// Bind functions
-		this.bind(this.processEnemyBullets);
-		this.bind(this.processOwnBullets);
-		this.bind(this.moveTank);
 		this.bind(this.handleFire);
 		
 		this.bind(this.handleJoin);
@@ -66,41 +55,15 @@ db.DuneBuggyGame = new Class({
 			hp: 100
 		};
 		
-		// Tank
-		/*
-		this.tank = new db.OwnTank({
-			game: this
-		});
-		*/
-		var camera = this.camera;
-		this.tank = new db.Buggy({
-			game: this,
-			isSelf: true,
-			alliance: 'self',
-			callback: function() {
-				// Uncomment for direct attachment
-				// camera.rotation.set(0, Math.PI, 0);
-				// camera.position.set(0, 75, -300);
-				// camera.lookAt(this.root);
-				// this.root.add(camera);
-			}
-		});
 		
-		this.camera.position.y = 50;
-		this.camera.position.x = 0;
-		this.camera.position.z = -20;
-		
-		// Create camera that follows tank
-		this.cameraControls = new db.CameraControls({
-			tank: this.tank,
-			scene: this.scene,
-			camera: this.camera,
-			type: this.options.cameraType
-		});
-		
-		// Catch fire events
-		this.tank.on('fire', this.handleFire);
-		
+		/******************
+		Scene setup
+		******************/
+		this.scene.setGravity(new THREE.Vector3(0, this.options.physics.gravity, 0));
+
+		/******************
+		Enemy setup
+		******************/
 		this.enemies = {
 			_list: [],
 			_map: {}, // new WeakMap()
@@ -128,13 +91,6 @@ db.DuneBuggyGame = new Class({
 			},
 			list: function() {
 				return this._list;
-			},
-			meshes: function() {
-				var meshes = [];
-				this._list.forEach(function(enemy) {
-					meshes.push(enemy.getBody());
-				});
-				return meshes;
 			},
 			delete: function(nameOrId) {
 				var enemy = this.get(nameOrId);
@@ -168,6 +124,7 @@ db.DuneBuggyGame = new Class({
 					console.log('%s has joined the fray', enemyInfo.name);
 				}
 				
+				// TODO: include velocities?
 				var enemyTank = new db.Buggy({
 					game: that,
 					type: 'enemy',
@@ -187,18 +144,74 @@ db.DuneBuggyGame = new Class({
 		******************/
 		// Sound
 		this.sound = new db.Sound({
-			sounds: db.config.sounds
+			sounds: this.options.sounds
 		});
+		
+		/******************
+		Environment setup
+		******************/
+		// Ambient light
+		this.ambientLight = new THREE.AmbientLight(0xEEEEEE); // TODO: Tweak these values
+		this.scene.add(this.ambientLight);
+	
+		// Directional light
+		this.light = new THREE.SpotLight(0xFFFFFF, 2); // TODO: Tweak these values
+		this.light.position.set(2200, 2200, -4000); // TODO: Tweak these values
+		this.light.castShadow = true;
+		this.light.shadowCameraVisible = true; // For debugging
+		this.light.shadowMapWidth = 1024;
+		this.light.shadowMapHeight = 1024;
+		this.light.shadowCameraNear = 500;
+		this.light.shadowCameraFar = 4000;
+		this.light.shadowCameraFov = 30;
+		this.scene.add(this.light);
+		
+		// Load a map
+		this.loadMap(db.maps['Lollypop Land']);
+		
+		this.camera.position.set(0,300,0);
+		this.camera.lookAt(new THREE.Vector3(0,0,0));
+		
+		// Start rendering
+		this.start();
+	},
+	
+	initialize: function() {
+		console.log('Initializing game...');
+		
+		// Ground plane
+		this.ground = new db.Ground({ game: this });
+		
+		// Buggy
+		this.tank = new db.Buggy({
+			game: this,
+			isSelf: true,
+			alliance: 'self',
+			callback: function() {
+				console.log('Player model loaded...');
+			}
+		});
+		
+		// Create camera that follows tank
+		this.cameraControls = new db.CameraControls({
+			tank: this.tank,
+			scene: this.scene,
+			camera: this.camera,
+			type: this.options.cameraType
+		});
+		
+		// Catch fire events
+		this.tank.on('fire', this.handleFire);
 		
 		// Communication
 		this.comm = new db.Comm({
 			player: this.player,
 			tank: this.tank,
-			server: db.config.comm.server
+			server: this.options.comm.server
 		});
 		
-		// Add radar, if available
-		if (db.Radar) this.radar = new db.Radar({ game: this });
+		// Add radar
+		this.radar = new db.Radar({ game: this });
 		
 		this.comm.on('fire', this.handleEnemyFire);
 		
@@ -217,15 +230,6 @@ db.DuneBuggyGame = new Class({
 		/******************
 		Rendering hooks
 		******************/
-		// Remove bullets fried by enemies
-		//this.hook(this.processEnemyBullets);
-
-		// Evaluate collisions for out bullets
-		//this.hook(this.processOwnBullets);
-
-		// Evaluate controls?
-		//this.hook(this.moveTank);
-		
 		// Evaluate keyboard controls
 		this.hook(this.tank.controlsLoopCb.bind(this.tank));
 		
@@ -236,37 +240,10 @@ db.DuneBuggyGame = new Class({
 		this.hook(this.cameraControls.update);
 		
 		/******************
-		Environment setup
-		******************/
-		// Ambient light
-		this.ambientLight = new THREE.AmbientLight(0xEEEEEE); // TODO: Tweak these values
-		this.scene.add(this.ambientLight);
-	
-		// Directional light
-		this.directionalLight = new THREE.DirectionalLight(0xFFFFFF, 2); // TODO: Tweak these values
-		this.directionalLight.position.set(2200, 1200, -4000); // TODO: Tweak these values
-		this.directionalLight.castShadow = true;
-		// this.directionalLight.shadowCameraVisible = true; // For debugging
-		this.scene.add(this.directionalLight);
-		
-		// Ground plane
-		//this.ground = new db.FlatGround({ game: this });
-		this.ground = new db.Ground({ game: this });
-		
-		/******************
 		Initialization
 		******************/
 		// Start communication
 		this.comm.connected();
-		
-		// Load a map
-		this.loadMap(db.maps['Lollypop Land']);
-		
-		this.camera.position.set(0,300,0);
-		this.camera.lookAt(new THREE.Vector3(0,0,0));
-		
-		// Start rendering
-		this.start();
 	},
 
 	destruct: function() {
@@ -280,7 +257,7 @@ db.DuneBuggyGame = new Class({
 	
 	handleLeave: function(message) {
 		if (this.enemies.delete(message.name)) {
-			console.log('%s has left', message.name);	
+			console.log('%s has left', message.name);
 		}
 	},
 	
@@ -350,7 +327,7 @@ db.DuneBuggyGame = new Class({
 		var volume = this.getVolumeAt(bulletPosition);
 		
 		// Play sound
-		var soundInfo = db.config.weapons[message.type].sound;
+		var soundInfo = this.options.weapons[message.type].sound;
 		this.sound.play(soundInfo.file, soundInfo.volume*volume);
 		
 		this.enemyBullets.push({
@@ -362,13 +339,13 @@ db.DuneBuggyGame = new Class({
 	
 	getVolumeAt: function(point) {
 		var distance = this.tank.getRoot().position.distanceTo(point);
-		var volume = 1 - distance/db.config.sound.silentDistance;
+		var volume = 1 - distance/this.options.sound.silentDistance;
 		return Math.min(Math.max(volume, 0), 1);
 	},
 	
 	handleHit: function(message) {
 		// Decrement HP
-		this.player.hp -= db.config.weapons[message.type].damage;
+		this.player.hp -= this.options.weapons[message.type].damage;
 		
 		this.sound.play('hit_tank_self');
 		console.log('You were hit with a %s by %s! Your HP: %d', message.type, message.name, this.player.hp);
@@ -420,185 +397,6 @@ db.DuneBuggyGame = new Class({
 		for (var i = 0; i < items.length; i++) {
 			this.mapItems.push(this.addMapItem(items[i]));
 		}
-	},
-	
-	processEnemyBullets: function() {
-		var time = new Date().getTime();
-		removeBulletLoop: for (var i = 0; i < this.enemyBullets.length; i++) {
-			var bullet = this.enemyBullets[i];
-			if (!bullet) { // odd bug, not sure why
-				console.error('Bug: Tried to remove ENEMY bullet that did not exist at index %s with length %s', i, this.enemyBullets.length);
-				continue;
-			}
-			
-			var bulletModel = bullet.instance.getModel();
-			
-			var age = time-bullet.time;
-			if (age > db.config.weapons[bullet.type].time) {
-				bullet.instance.destruct();
-				this.enemyBullets.splice(i, 1);
-				i--;
-				continue removeBulletLoop;
-			}
-			
-			// MAP ITEMS
-			for (var j = 0; j < this.mapItems.length; j++) {
-				var mapItem = this.mapItems[j];
-				var itemModel = mapItem.getHitBox();
-				
-				if (this.isHit(itemModel, bulletModel, bullet.type)) {
-					this.sound.play('hit_building', this.getVolumeAt(mapItem.getRoot().position));
-					
-					// Remove HP from map item
-					{ // TEMPORARY REMOVE THIS
-						mapItem.takeHit(db.config.weapons[bullet.type].damage);
-						if (mapItem.isDestroyed()) {
-							this.mapItems.splice(j, 1);
-							j--;
-						}
-					}
-					
-					bullet.instance.destruct();
-					this.enemyBullets.splice(i, 1);
-					i--;
-					continue removeBulletLoop;
-				}
-			}
-			
-			// Your tank
-			if (this.isHit(this.tank.getHitBox(), bulletModel, bullet.type)) {
-				// Remove bullets that hit me
-				bullet.instance.destruct();
-				this.enemyBullets.splice(i, 1);
-				i--;
-				continue removeBulletLoop;
-			}
-		}
-	},
-	
-	// Calculated line of sight: doesn't work great for objects, as bullet may be inside of the object!
-	isHit: function(target, bullet, type) {
-		// Ray starts at bullet position
-		var rayStart = bullet.position.clone();
-	
-		// Calculate a point in space in front of the bullet
-		var deltaX = Math.sin(bullet.rotation.y) * 10;
-		var deltaZ = Math.cos(bullet.rotation.y) * 10;
-		var focusX = rayStart.x + deltaX;
-		var focusZ = rayStart.z + deltaZ;
-		var rayEnd = new THREE.Vector3(focusX, bullet.position.y, focusZ);
-		
-		// Get the direction for the ray
-		var rayDirection = new THREE.Vector3();
-		rayDirection.sub(rayEnd, rayStart).normalize();
-		
-		// Fire a ray from the bullet to 10 units ahead
-		var ray = new THREE.Ray(rayStart, rayDirection);
-		
-		// See if the target is in the line of fire
-		var intersects = ray.intersectObject(target);
-		
-		if (this.options.debug.bulletCollisions) {
-			console.log('Target: ',			target);
-			console.log('bullet: ',			bullet);
-			console.log('Ray start: ',		rayStart.x, rayStart.y, rayStart.z);
-			console.log('Ray end: ',		rayEnd.x, rayEnd.y, rayEnd.z);
-			console.log('Ray direction: ',	rayDirection.x, rayDirection.y, rayDirection.z);
-			console.log('Target: ',			target.position.x, target.position.y, target.position.z);
-			console.log('Intersects: ',		intersects.length ? intersects[0].distance : 'no');
-		}
-		
-		// must be greater or equal to max distance a bullet can move in one frame
-		// That happens to be about 15...
-		return !!(intersects.length && intersects[0].distance < db.config.weapons[type].hitDistance);
-	},
-	
-	processOwnBullets: function() {
-		var time = new Date().getTime();
-		
-		// Check bullet collisions
-		bulletCollisionLoop: for (var i = 0; i < this.tank.bullets.length; i++) {
-			var bullet = this.tank.bullets[i];
-			if (!bullet) { // odd bug, not sure why
-				console.error('Bug: Tried to remove ENEMY bullet that did not exist at index %s with length %s', i, this.tank.bullets.length);
-				continue;
-			}
-				
-			var age = time-bullet.time;
-			if (age > db.config.weapons[bullet.type].time) {
-				bullet.instance.destruct();
-				this.tank.bullets.splice(i, 1);
-				i--;
-			}
-			else { // Check for collisions
-				var bulletModel = bullet.instance.getModel();
-				
-				// MAP ITEMS
-				for (var j = 0; j < this.mapItems.length; j++) {
-					var mapItem = this.mapItems[j];
-					var itemModel = mapItem.getHitBox();
-
-					if (this.isHit(itemModel, bulletModel, bullet.type)) {
-						if (this.options.debug.bulletCollisions)
-							console.warn('Bullet hit map item...');
-
-						this.sound.play('hit_building', this.getVolumeAt(mapItem.getRoot().position));
-						
-						// Tell the server the map item took a hit
-						//this.comm.hit(mapItemName);
-
-						// Remove HP from map item
-						mapItem.takeHit(db.config.weapons[bullet.type].damage);
-						if (mapItem.isDestroyed()) {
-							this.mapItems.splice(j, 1);
-							j--;
-						}
-						
-						// Remove the bullet from the scene
-						bullet.instance.destruct();
-						this.tank.bullets.splice(i, 1);
-						i--;
-						continue bulletCollisionLoop;
-					}
-				}
-				
-				for (var j = 0; j < this.enemies._list.length; j++) {
-					var enemy = this.enemies._list[j];
-					if (this.isHit(enemy.getHitBox(), bulletModel, bullet.type)) {
-						if (this.options.debug.bulletCollisions)
-							console.warn('Hit %s!', enemy.getName());
-				
-						enemy.takeHit();
-						
-						this.sound.play('hit_tank', this.getVolumeAt(enemy.getRoot().position));
-						this.comm.hit(enemy.getName(), bullet.type);
-				
-						bullet.instance.destruct();
-						this.tank.bullets.splice(i, 1);
-						i--;
-						continue bulletCollisionLoop;
-					}
-				}
-			}
-		}
-	},
-	
-	moveTank: function(delta) {
-		return;
-		var tankObj = this.tank;
-		
-		// Calculate the future position of the tank
-		var curPos = tankObj.getPosition();
-		var newPos = tankObj.evaluateControls(delta, this.tank.controls, true);
-		
-		// Adjust position
-		newPos.position = [
-			curPos.x + newPos.velocity.x * delta,
-			curPos.z + newPos.velocity.z * delta
-		];
-		
-		// Set position
-		//tankObj.setPosition(newPos.position, newPos.tankOrientation);
 	},
 	
 	switchCamera: function() {
