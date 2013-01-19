@@ -38,6 +38,14 @@ db.Buggy = new Class({
 		this.root.__dirtyPosition = true;
 		this.root.__dirtyRotation = true;
 	},
+	
+	destruct: function() {
+		// Remove wheels
+		this.game.scene.remove(this.vehicle.wheels[0]);
+		this.game.scene.remove(this.vehicle.wheels[1]);
+		this.game.scene.remove(this.vehicle.wheels[2]);
+		this.game.scene.remove(this.vehicle.wheels[3]);
+	},
 
 	construct: function(options) {
 		this.options = options;
@@ -48,37 +56,22 @@ db.Buggy = new Class({
 		
 		this.turret = new THREE.Object3D();
 		
+		this.bind(this.handleControls);
+		
 		// Store bullets and last fire time
 		this.bullets = [];
 		this.lastFireTime = {};
 		
-		var input = this.controls = {
+		this.controls = {
 			power: null,
 			direction: null,
 			steering: 0,
 			force: 0
 		};
-		
-		var tuning = {};
-		tuning['max_power'] = 600;
-		tuning['boost_power'] = 1400;
-		tuning['brake_power'] = 50;
-		tuning['mass'] = 12;
-		
-		var k = 0.95; // almost full damping
-		
-		tuning['suspension_stiffness'] = 30;
-		tuning['suspension_damping'] = k * 2.0 * Math.sqrt(tuning['suspension_stiffness']);
-		tuning['suspension_compression'] = k * 2.0 * Math.sqrt(tuning['suspension_stiffness']);
-		tuning['max_suspension_travel_cm'] = 350;
-		tuning['friction_slip'] = 0.8; // was 0.8?
-		tuning['max_suspension_force'] = 14000;
-		
-		tuning['wheel_radius'] = 5.5;
-		tuning['suspension_rest_length'] = 0.400;
-		
-		tuning['steering_increment'] = 1/25;
-		tuning['max_steering_radius'] = 0.25;
+	},
+	
+	init: function() {
+		var options = this.options;
 		
 		var axle_width = 11.5;
 		var wheel_z_front = 19;
@@ -90,170 +83,170 @@ db.Buggy = new Class({
 		var wheel_y_back = -box_height/5; //-0.25-box_height/6
 		
 		var tuning_frontWheel = {
-			suspension_stiffness: tuning['suspension_stiffness'],
-			suspension_compression: tuning['suspension_compression'],
-			suspension_damping: tuning['suspension_damping'],
-			max_suspension_travel: tuning['max_suspension_travel'],
-			max_suspension_force: tuning['max_suspension_force']
+			suspension_stiffness: db.config.buggy['suspension_stiffness'],
+			suspension_compression: db.config.buggy['suspension_compression'],
+			suspension_damping: db.config.buggy['suspension_damping'],
+			max_suspension_travel: db.config.buggy['max_suspension_travel'],
+			max_suspension_force: db.config.buggy['max_suspension_force']
 		};
 	
 		var tuning_backWheel = {
-			suspension_stiffness: tuning['suspension_stiffness'],
-			suspension_compression: tuning['suspension_compression'],
-			suspension_damping: tuning['suspension_damping'],
-			max_suspension_travel: tuning['max_suspension_travel'],
-			max_suspension_force: tuning['max_suspension_force']
+			suspension_stiffness: db.config.buggy['suspension_stiffness'],
+			suspension_compression: db.config.buggy['suspension_compression'],
+			suspension_damping: db.config.buggy['suspension_damping'],
+			max_suspension_travel: db.config.buggy['max_suspension_travel'],
+			max_suspension_force: db.config.buggy['max_suspension_force']
 		};
 		
 		var that = this;
 		
-		var loader = new THREE.JSONLoader();
-		loader.load("duneBuggy/models/buggy_body.js", function(car, materials) {
-			loader.load("duneBuggy/models/buggy_turret.js", function(turret) {
-				loader.load("duneBuggy/models/buggy_wheel.js", function(wheel) {
-					materials[0].map.flipY = false;
-					materials[0].side = THREE.DoubleSide; // make it so we can't see through the bottom
-					
-					car.doubleSided = true;
-					
-					var material = new THREE.MeshFaceMaterial(materials);
-					
-					this.turret = new THREE.Mesh(turret, material);
-					this.turret.position.z = -4.5;
-					
-					var mesh = this.root = new Physijs.ConvexMesh(
-						car,
-						material,
-						tuning['mass']
-					);
-					
-					this.root.add(this.turret);
+		var car = this.options.game.models.buggy_body.geometry;
+		var materials = this.options.game.models.buggy_body.materials;
+		var turret = this.options.game.models.buggy_turret.geometry;
+		var wheel = this.options.game.models.buggy_wheel.geometry;
+		
+		materials[0].map.flipY = false;
+		materials[0].side = THREE.DoubleSide; // make it so we can't see through the bottom
+	
+		car.doubleSided = true;
+	
+		var material = new THREE.MeshFaceMaterial(materials);
+	
+		this.turret = new THREE.Mesh(turret, material);
+		this.turret.position.z = -4.5;
+	
+		var mesh = this.root = new Physijs.ConvexMesh(
+			car,
+			material,
+			db.config.buggy['mass']
+		);
+	
+		this.root.add(this.turret);
 
-					if (options.position)
-						mesh.position.copy(options.position);
-					else
-						mesh.position.y = 145;
-					
-					mesh.castShadow = mesh.receiveShadow = true;
-				
-					var vehicle = this.vehicle = new Physijs.Vehicle(mesh, new Physijs.VehicleTuning(
-						tuning['suspension_stiffness'],
-						tuning['suspension_compression'],
-						tuning['suspension_damping'],
-						tuning['max_suspension_travel_cm'],
-						tuning['friction_slip'],
-						tuning['max_suspension_force']
-					));
-				
-					//mesh.useQuaternion = true;
-				
-					options.game.scene.add(vehicle);
-				
-					for (var i = 0; i < 4; i++) {
-						var leftWheel = i % 2 === 0;
-						var frontWheel = i <= 1;
-					
-						// TODO: flip wheel for left/right sides
-						vehicle.addWheel(
-							wheel,
-							material,
-							/* connection_point */ new THREE.Vector3(
-									leftWheel ? -axle_width : axle_width,
-									frontWheel ? wheel_y_front : wheel_y_back,
-									frontWheel ? wheel_z_front : wheel_z_back
-							),
-							/* wheel_direction */ new THREE.Vector3(0, -1, 0),
-							/* wheel_axle */ new THREE.Vector3(-1, 0, 0),
-							/* suspension_rest_length */ tuning['suspension_rest_length'],
-							/* wheel_radius */ tuning['wheel_radius'],
-							/* is_front_wheel */ frontWheel,
-							/* tuning */ !frontWheel ? tuning_frontWheel : tuning_backWheel
-						);
-					}
-					
-					
-					if (options.alliance === 'self') {
-						/*
-						mesh.addEventListener('collision', function(mesh) {
-							console.log('Buggy collided: ', mesh);
-						});
-						*/
-						
-						options.game.scene.addEventListener(
-							'update',
-							function() {
-								if (input && vehicle) {
-									if (input.reset || mesh.position.y < -100) {
-										//mesh.position.y = mesh.position.y + 5;
-										//mesh.position.set(769.3665771484375, 146.9954833984375, 3229.85205078125);
-										mesh.position.set(0, 120, 0);
-										mesh.__dirtyPosition = true;
-									
-										//mesh.rotation.set(0,mesh.rotation.y,0);
-										//mesh.rotation.set(-0.17233238852962912, 3.017261689394642, -0.016288831497271422);
-										mesh.rotation.set(0,mesh.rotation.y,0);
-										mesh.__dirtyRotation = true;
-									
-										mesh.setLinearVelocity({x: 0, y: 0, z: 0});
-										mesh.setAngularVelocity({x: 0, y: 0, z: 0});
-										return;
-									}
-								
-									if (input.direction !== null) {
-										input.steering += input.direction * tuning['steering_increment'];
-										if (input.steering < -tuning['max_steering_radius']) input.steering = -tuning['max_steering_radius'];
-										if (input.steering > tuning['max_steering_radius']) input.steering = tuning['max_steering_radius'];
-									}
-									else {
-										if (input.steering < 0)
-											input.steering = Math.min(input.steering + tuning['steering_increment'], 0);
-										else
-											input.steering = Math.max(input.steering - tuning['steering_increment'], 0);
-									}
-									vehicle.setSteering(input.steering, 0);
-									vehicle.setSteering(input.steering, 1);
+		if (options.position)
+			mesh.position.copy(options.position);
+		else
+			mesh.position.y = 145;
+	
+		mesh.castShadow = true;
+		//mesh.receiveShadow = true;
 
-									if (input.power === true) {
-										/*
-										// Acceleration
-										input.force += tuning['max_power']/10;
-										if (input.force > tuning['max_power'])
-											input.force = tuning['max_power'];
-										*/
-										input.force = tuning['max_power'];
-									
-										if (input.boost) {
-											input.force = tuning['boost_power'];
-										}
-										
-										vehicle.applyEngineForce(input.force);
-									}
-									else if (input.reverse === true) {
-										input.force = -tuning['max_power'];
-										vehicle.applyEngineForce(input.force);
-									}
-									else {
-										input.force = 0;
-										vehicle.applyEngineForce(input.force);
-									}
-									
-									if (input.power === false) {
-										vehicle.setBrake(tuning['brake_power'], 2);
-										vehicle.setBrake(tuning['brake_power'], 3);
-									}
-									
-									if (input.fire)
-										that.handleFire();
-								}
-							}
-						);
-					}
-					
-					if (options.callback)
-						options.callback.call(this);
-				}.bind(this));
-			}.bind(this));
-		}.bind(this));
+		var vehicle = this.vehicle = new Physijs.Vehicle(mesh, new Physijs.VehicleTuning(
+			db.config.buggy['suspension_stiffness'],
+			db.config.buggy['suspension_compression'],
+			db.config.buggy['suspension_damping'],
+			db.config.buggy['max_suspension_travel_cm'],
+			db.config.buggy['friction_slip'],
+			db.config.buggy['max_suspension_force']
+		));
+
+		// mesh.useQuaternion = true;
+
+		options.game.scene.add(vehicle);
+
+		for (var i = 0; i < 4; i++) {
+			var leftWheel = i % 2 === 0;
+			var frontWheel = i <= 1;
+	
+			// TODO: flip wheel for left/right sides
+			vehicle.addWheel(
+				wheel,
+				material,
+				/* connection_point */ new THREE.Vector3(
+						leftWheel ? -axle_width : axle_width,
+						frontWheel ? wheel_y_front : wheel_y_back,
+						frontWheel ? wheel_z_front : wheel_z_back
+				),
+				/* wheel_direction */ new THREE.Vector3(0, -1, 0),
+				/* wheel_axle */ new THREE.Vector3(-1, 0, 0),
+				/* suspension_rest_length */ db.config.buggy['suspension_rest_length'],
+				/* wheel_radius */ db.config.buggy['wheel_radius'],
+				/* is_front_wheel */ frontWheel,
+				/* tuning */ !frontWheel ? tuning_frontWheel : tuning_backWheel
+			);
+		}
+	
+	
+		if (options.alliance === 'self') {
+			/*
+			mesh.addEventListener('collision', function(mesh) {
+				console.log('Buggy collided: ', mesh);
+			});
+			*/
+		
+			options.game.scene.addEventListener(
+				'update',
+				this.handleControls
+			);
+		}
+	},
+	
+	handleControls: function(delta) {
+		if (this.controls && this.vehicle) {
+			// Reset position if the vehicle has fallen off the edge or reset is pressed
+			if (this.controls.reset || this.root.position.y < -100) {
+				this.root.position.set(0, db.config.game.startY, 0);
+				this.root.__dirtyPosition = true;
+		
+				this.root.rotation.set(0,0,0);
+				this.root.__dirtyRotation = true;
+		
+				this.root.setLinearVelocity({x: 0, y: 0, z: 0});
+				this.root.setAngularVelocity({x: 0, y: 0, z: 0});
+				return;
+			}
+	
+			// Handle steering
+			if (this.controls.direction !== null) {
+				this.controls.steering += this.controls.direction * db.config.buggy['steering_increment'];
+				if (this.controls.steering < -db.config.buggy['max_steering_radius']) this.controls.steering = -db.config.buggy['max_steering_radius'];
+				if (this.controls.steering > db.config.buggy['max_steering_radius']) this.controls.steering = db.config.buggy['max_steering_radius'];
+			}
+			else {
+				if (this.controls.steering < 0)
+					this.controls.steering = Math.min(this.controls.steering + db.config.buggy['steering_increment'], 0);
+				else
+					this.controls.steering = Math.max(this.controls.steering - db.config.buggy['steering_increment'], 0);
+			}
+			this.vehicle.setSteering(this.controls.steering, 0);
+			this.vehicle.setSteering(this.controls.steering, 1);
+			
+			// Power/coast only when brakes not depressed
+			// Forward overrides reverse
+			// TODO: brake when reverse/forward given
+			if (this.controls.brake) {
+				this.controls.force = 0;
+				this.vehicle.applyEngineForce(this.controls.force);
+				this.vehicle.setBrake(db.config.buggy['brake_power'], 2);
+				this.vehicle.setBrake(db.config.buggy['brake_power'], 3);
+			}
+			else if (this.controls.forward === true) {
+				/*
+				// Acceleration
+				this.controls.force += db.config.buggy['max_power']/10;
+				if (this.controls.force > db.config.buggy['max_power'])
+					this.controls.force = db.config.buggy['max_power'];
+				*/
+				this.controls.force = db.config.buggy['max_power'];
+	
+				if (this.controls.boost) {
+					this.controls.force = db.config.buggy['boost_power'];
+				}
+		
+				this.vehicle.applyEngineForce(this.controls.force);
+			}
+			else if (this.controls.reverse === true) {
+				this.controls.force = -db.config.buggy['max_power'];
+				this.vehicle.applyEngineForce(this.controls.force);
+			}
+			else {
+				this.controls.force = 0;
+				this.vehicle.applyEngineForce(this.controls.force);
+			}
+		
+			if (this.controls.fire)
+				this.handleFire();
+		}
 	},
 	handleFire: function() {
 		var time = new Date().getTime();
