@@ -1,5 +1,5 @@
 Math.toDegrees = function(radians) {
-	return Math.round(radians * 180/Math.PI);
+	return radians * 180/Math.PI;
 };
 
 db.CameraControls = new Class({
@@ -55,6 +55,14 @@ db.CameraControls = new Class({
 				
 				// Set camera position
 				camera.position.copy(newCameraPosition);
+				
+				// console.log('Rotation: ',
+				// 	Math.toDegrees(tankMesh.rotation.x).toFixed(1),
+				// 	Math.toDegrees(tankMesh.rotation.y).toFixed(1),
+				// 	Math.toDegrees(tankMesh.rotation.z).toFixed(1)
+				// );
+				// this.options.camera.position.x = tankPosition.x+Math.sin(tankMesh.rotation.y+Math.PI)*this.options.chase.trailX;
+				// this.options.camera.position.z = tankPosition.z+Math.cos(tankMesh.rotation.y+Math.PI)*this.options.chase.trailZ;
 			}
 			else if (this.options.chase.follow == 'turret') {
 				// Update the matrix before we calculate
