@@ -32,6 +32,8 @@ var db = {
 			silentDistance: 1500
 		},
 		buggy: {
+			hp: 100,
+			
 			max_power: 600,
 			boost_power: 1400,
 			brake_power: 50,
