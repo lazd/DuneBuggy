@@ -127,7 +127,7 @@ db.DuneBuggyGame = new Class({
 				// TODO: include velocities?
 				var enemyTank = new db.Buggy({
 					game: that,
-					type: 'enemy',
+					alliance: 'enemy',
 					name: enemyInfo.name,
 					position: new THREE.Vector3(enemyInfo.pos[0], 0, enemyInfo.pos[1]),
 					rotation: enemyInfo.rot,
@@ -151,19 +151,12 @@ db.DuneBuggyGame = new Class({
 		Environment setup
 		******************/
 		// Ambient light
-		this.ambientLight = new THREE.AmbientLight(0xEEEEEE); // TODO: Tweak these values
+		this.ambientLight = new THREE.AmbientLight(0xEEEEEE);
 		this.scene.add(this.ambientLight);
 	
 		// Directional light
-		this.light = new THREE.SpotLight(0xFFFFFF, 2); // TODO: Tweak these values
-		this.light.position.set(2200, 2200, -4000); // TODO: Tweak these values
-		this.light.castShadow = true;
-		this.light.shadowCameraVisible = true; // For debugging
-		this.light.shadowMapWidth = 1024;
-		this.light.shadowMapHeight = 1024;
-		this.light.shadowCameraNear = 500;
-		this.light.shadowCameraFar = 4000;
-		this.light.shadowCameraFov = 30;
+		this.light = new THREE.DirectionalLight(0xFFFFFF, 2);
+		this.light.position.set(2200, 2200, -4000);
 		this.scene.add(this.light);
 		
 		// Load a map
@@ -311,7 +304,7 @@ db.DuneBuggyGame = new Class({
 				game: this,
 				position: bulletPosition,
 				rotation: message.rot,
-				type: 'enemy'
+				alliance: 'enemy'
 			});
 		}
 		else {
@@ -319,7 +312,7 @@ db.DuneBuggyGame = new Class({
 				game: this,
 				position: new THREE.Vector3(message.pos[0], 0, message.pos[1]),
 				rotation: message.rot,
-				type: 'enemy'
+				alliance: 'enemy'
 			});
 		}
 		
@@ -332,7 +325,7 @@ db.DuneBuggyGame = new Class({
 		
 		this.enemyBullets.push({
 			instance: bulletModel,
-			type: message.type,
+			alliance: 'enemy',
 			time: time
 		});
 	},

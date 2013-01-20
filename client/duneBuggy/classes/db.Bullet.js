@@ -1,5 +1,4 @@
 (function() {
-	// internal helper variables
 	var bulletTexture = {
 		width: 0.5,
 		height: 0.5,
@@ -20,20 +19,25 @@
 	var bulletGeometry = new THREE.CubeGeometry(bulletTexture.width, bulletTexture.height, bulletTexture.depth);
 
 	db.Bullet = new Class({
+		toString: 'Bullet',
+		
 		extend: db.GameObject,
 	
 		construct: function(options){
-			// handle parameters
 			options = jQuery.extend({
 				position: new THREE.Vector3(0, 0, 0),
-				rotation: new THREE.Vector3(0, 0, 0)
+				rotation: new THREE.Vector3(0, 0, 0),
+				alliance: 'enemy'
 			}, options);
 			
-			var material = options.type == 'friend' ? friendBulletMaterial : enemyBulletMaterial;
-		
-			// create the mesh
+			this.alliance = options.alliance;
+			
+			// Set bullet color according to alliance
+			var material = this.alliance === 'friend' ? friendBulletMaterial : enemyBulletMaterial;
+			
 			this.root = new Physijs.BoxMesh(bulletGeometry, material, db.config.weapons.bullet.mass);
-		
+			this.root.instance = this;
+			
 			// Set initial position
 			this.root.position.copy(options.position);
 			this.root.rotation.copy(options.rotation);

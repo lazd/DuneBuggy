@@ -1,9 +1,6 @@
 (function() {
-	var faceMaterial = new THREE.MeshFaceMaterial({
-		vetexColor: THREE.FaceColors
-	});
-
 	db.Missile = new Class({
+		toString: 'Missile',
 		extend: db.GameObject,
 	
 		construct: function(options){
@@ -13,28 +10,32 @@
 				rotation: new THREE.Vector3(1, 1, 1)
 			}, options);
 	
+			this.alliance = options.alliance;
+			
 			// Set missile color based on alliance
-			var missileColor = options.type == 'friend' ? db.config.colors.friend : db.config.colors.enemy;
-	
-			// Load model
+			var missileColor = this.alliance === 'friend' ? db.config.colors.friend : db.config.colors.enemy;
+			
 			var geometry = this.game.models.missilePhoenix.geometry;
 			
-			this.missileGeometry = geometry;
-	
-			// geometry.materials[0] = new THREE.MeshLambertMaterial({ color: missileColor, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
+			// var material = new THREE.MeshLambertMaterial({ color: missileColor, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
 			var material = new THREE.MeshPhongMaterial({ color: missileColor, ambient: 0x050505, shading: THREE.FlatShading, vertexColors: THREE.VertexColors });
 	
 			// Body
 			this.root = new Physijs.CylinderMesh(geometry, material, db.config.weapons.missile.mass);
+			this.root.instance = this;
+
+			// The missile is huge, so scale it down
+			// TODO: re-export with proper size
 			this.root.scale.set(db.config.size.missile, db.config.size.missile, db.config.size.missile);
 			
+			// Missiles cast shadows
 			this.root.castShadow = true;
-			this.root.receiveShadow = true;
+			//this.root.receiveShadow = true;
 			
 			// Set initial position
 			this.root.position.copy(options.position);
 			this.root.rotation.copy(options.rotation);
-
+			
 			// Temporary
 			this.root.position.y += 25;
 			
@@ -73,5 +74,4 @@
 		}
 		*/
 	});
-
 }());

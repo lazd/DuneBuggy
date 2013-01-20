@@ -30,8 +30,27 @@ db.Game = new Class({
 		// Projector
 		this.projector = new THREE.Projector();
 		
-		// Create loader
+		// Model loader
 		this.loader = new THREE.JSONLoader();
+		
+		// Gamepad interface
+		this.gamepad = new Gamepad();
+		
+		this.gamepad.bind(Gamepad.Event.CONNECTED, function(device) {
+			console.log('Gamepad connected: '+device.id);
+		});
+
+		this.gamepad.bind(Gamepad.Event.DISCONNECTED, function(device) {
+			console.log('Gamepad disconnected: '+device.id);
+		});
+
+		this.gamepad.bind(Gamepad.Event.UNSUPPORTED, function(device) {
+			console.warn('Unsupported gamepad connected: '+device.id);
+		});
+		
+		if (!this.gamepad.init()) {
+			console.warn('Gamepads are not supported on this browser');
+		}
 		
 		/******************
 		Create rendering instances
@@ -50,6 +69,7 @@ db.Game = new Class({
 		// Configure shadow
 		this.renderer.shadowMapEnabled = true;
 		this.renderer.shadowMapSoft = true;
+		this.renderer.shadowMapCullFrontFaces = false;
 
 		// Create the scene
 		this.scene = scene = new Physijs.Scene;
@@ -93,7 +113,7 @@ db.Game = new Class({
 		this.physics_stats.domElement.style.zIndex = 100;
 		document.body.appendChild(this.physics_stats.domElement);
 		
-		
+		// Physics engine statistics
 		this.scene.addEventListener(
 			'update',
 			function() {
@@ -102,6 +122,8 @@ db.Game = new Class({
 			}
 		);
 		
+		// Physics engine ready state
+		// TODO: This doesn't really do much, find a better way to figure out if the engine has started. 2+ ticks?
 		var that = this;
 		this.physicsStarted = false;
 		this.scene.addEventListener(

@@ -18,6 +18,24 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	var keyboard = db.Keyboard;
 	var mouse = db.Mouse;
 	
+	var hasGamepad = !!this.game.gamepad.gamepads.length;
+	var gamepad = {};
+	if (hasGamepad) {
+		var gamepadState = this.game.gamepad.gamepads[0].state;
+		
+		gamepad.direction = gamepadState['LEFT_STICK_X']*-1;
+		gamepad.forward = gamepadState['X'] || gamepadState['RB_SHOULDER'];
+		gamepad.reverse = gamepadState['A'] || gamepadState['LB_SHOULDER'];
+		
+		gamepad.fire = gamepadState['LB'];
+		gamepad.handBrake = gamepadState['RB'];
+		
+		gamepad.boost = gamepadState['RIGHT_STICK'];
+		
+		gamepad.reset = gamepadState['BACK'];
+		
+	}
+	
 	var tankPosition = this.getRoot().position;
 	
 	// TODO: Reliably get tank rotation here or find another way to position the turret
@@ -62,32 +80,40 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		
 		this.getTurret().rotation.y = targetAngle - tankRotation - Math.PI*1.5;
 	}
-		
+	
+	// Steering
 	if (keyboard.pressed(this.keyMap.keyStateLeft) || keyboard.pressed(this.keyMap.keyStateLeft2))
 		this.controls.direction = 1;
 	else if (keyboard.pressed(this.keyMap.keyStateRight) || keyboard.pressed(this.keyMap.keyStateRight2))
 		this.controls.direction = -1;
+	else if (hasGamepad) {
+		this.controls.direction = null; // no keyboard controls
+		this.controls.steering = gamepad.direction;
+	}
 	else
-		this.controls.direction = null;
-		
-	if (keyboard.pressed(this.keyMap.keyStateUp) || keyboard.pressed(this.keyMap.keyStateUp2))
+		this.controls.direction = 0;
+
+	// Power
+	if (keyboard.pressed(this.keyMap.keyStateUp) || keyboard.pressed(this.keyMap.keyStateUp2) || gamepad.forward)
 		this.controls.forward = true;
 	else
 		this.controls.forward = false;
 
-	if (keyboard.pressed(this.keyMap.keyStateDown) || keyboard.pressed(this.keyMap.keyStateDown2))
+	if (keyboard.pressed(this.keyMap.keyStateDown) || keyboard.pressed(this.keyMap.keyStateDown2) || gamepad.reverse)
 		this.controls.reverse = true;
 	else
 		this.controls.reverse = false;
-		
-	if (keyboard.pressed(this.keyMap.handBrake))
+	
+	// Braking
+	if (keyboard.pressed(this.keyMap.handBrake) || gamepad.handBrake)
 		this.controls.brake = true;
 	else
 		this.controls.brake = false;
 	
-	this.controls.fire = keyboard.pressed(this.keyMap.keyStateFire) || mouse.buttons().left;
+	// Weapons
+	this.controls.fire = keyboard.pressed(this.keyMap.keyStateFire) || mouse.buttons().left || gamepad.fire;
 	
-	this.controls.boost = keyboard.pressed(this.keyMap.boost);
+	this.controls.boost = keyboard.pressed(this.keyMap.boost) || gamepad.boost;
 	
-	this.controls.reset = keyboard.pressed(this.keyMap.reset);
+	this.controls.reset = keyboard.pressed(this.keyMap.reset) || gamepad.reset;
 };

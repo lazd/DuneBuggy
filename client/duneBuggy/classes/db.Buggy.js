@@ -1,42 +1,28 @@
 db.Buggy = new Class({
+	toString: 'Buggy',
 	extend: db.GameObject,
 	
-	getTurret: function() {
-		return this.turret;
-	},
-
-	setPosition: function (position, rotation, tRot, aVeloc, lVeloc, interpolate) {
-		var posInterpolation = 0.05;
-		var rotInerpolation = 0.50;
+	construct: function(options) {
+		this.options = options;
 		
-		if (interpolate) {
-			// Interpolate position by adding the difference of the calulcated position and the position sent by the authoritative client
-			var newPositionVec = new THREE.Vector3(position[0], position[1], position[2]);
-			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));			
-			this.root.position.addSelf(posErrorVec);
-		}
-		else {
-			// Directly set position
-			this.root.position.set(position[0], position[1], position[2]);
-		}
-
-		// Set rotation
-		if (rotation)
-			this.root.rotation.set(rotation[0], rotation[1], rotation[2]);
+		this.game = options.game;
 		
-		// Set turret rotation
-		if (tRot !== undefined)
-			this.turret.rotation.y = tRot;
-			
-		if (aVeloc !== undefined && this.root.setAngularVelocity)
-			this.root.setAngularVelocity({ x: aVeloc[0], y: aVeloc[1], z: aVeloc[2] });
-			
-		if (lVeloc !== undefined && this.root.setLinearVelocity)
-			this.root.setLinearVelocity({ x: lVeloc[0], y: lVeloc[1], z: lVeloc[2] });
-			
-		// Tell the physics engine to update our position
-		this.root.__dirtyPosition = true;
-		this.root.__dirtyRotation = true;
+		this.bind(this.handleControls);
+		this.bind(this.handleCollision);
+		
+		// Store bullets and last fire time
+		this.bullets = [];
+		this.lastFireTime = {};
+		
+		// Set start hp
+		this.hp = db.config.buggy.hp;
+		
+		this.controls = {
+			power: null,
+			direction: null,
+			steering: 0,
+			force: 0
+		};
 	},
 	
 	destruct: function() {
@@ -47,29 +33,6 @@ db.Buggy = new Class({
 		this.game.scene.remove(this.vehicle.wheels[3]);
 	},
 
-	construct: function(options) {
-		this.options = options;
-		
-		this.game = options.game;
-		
-		this.root = new THREE.Object3D();
-		
-		this.turret = new THREE.Object3D();
-		
-		this.bind(this.handleControls);
-		
-		// Store bullets and last fire time
-		this.bullets = [];
-		this.lastFireTime = {};
-		
-		this.controls = {
-			power: null,
-			direction: null,
-			steering: 0,
-			force: 0
-		};
-	},
-	
 	init: function() {
 		var options = this.options;
 		
@@ -108,10 +71,9 @@ db.Buggy = new Class({
 		materials[0].map.flipY = false;
 		materials[0].side = THREE.DoubleSide; // make it so we can't see through the bottom
 	
-		car.doubleSided = true;
-	
 		var material = new THREE.MeshFaceMaterial(materials);
 	
+		// Create the turret, position it on top of the buggy
 		this.turret = new THREE.Mesh(turret, material);
 		this.turret.position.z = -4.5;
 	
@@ -168,46 +130,119 @@ db.Buggy = new Class({
 	
 	
 		if (options.alliance === 'self') {
-			/*
-			mesh.addEventListener('collision', function(mesh) {
-				console.log('Buggy collided: ', mesh);
-			});
-			*/
+			this.light = new THREE.DirectionalLight(0xFFFFFF, 2);
+			// this.light.shadowCameraVisible = true; // For debugging
+			this.light.castShadow = true;
+			this.light.onlyShadow = true;
+			this.light.shadowMapWidth = 1024;
+			this.light.shadowMapHeight = 1024;
+			this.light.shadowCameraNear = 500;
+			this.light.shadowCameraFar = 4000;
+			this.light.shadowCameraFov = 30;
+			this.light.target = this.root;
+			this.game.scene.add(this.light);
 		
+			// Process controls on each tick
 			options.game.scene.addEventListener(
 				'update',
 				this.handleControls
 			);
 		}
+		
+		// Detect collisions
+		mesh.addEventListener('collision', this.handleCollision);
+	},
+	
+	getTurret: function() {
+		return this.turret;
+	},
+
+	setPosition: function (position, rotation, tRot, aVeloc, lVeloc, interpolate) {
+		var posInterpolation = 0.05;
+		var rotInerpolation = 0.50;
+		
+		if (interpolate) {
+			// Interpolate position by adding the difference of the calulcated position and the position sent by the authoritative client
+			var newPositionVec = new THREE.Vector3(position[0], position[1], position[2]);
+			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));			
+			this.root.position.addSelf(posErrorVec);
+		}
+		else {
+			// Directly set position
+			this.root.position.set(position[0], position[1], position[2]);
+		}
+
+		// Set rotation
+		if (rotation)
+			this.root.rotation.set(rotation[0], rotation[1], rotation[2]);
+		
+		// Set turret rotation
+		if (tRot !== undefined)
+			this.turret.rotation.y = tRot;
+			
+		if (aVeloc !== undefined && this.root.setAngularVelocity)
+			this.root.setAngularVelocity({ x: aVeloc[0], y: aVeloc[1], z: aVeloc[2] });
+			
+		if (lVeloc !== undefined && this.root.setLinearVelocity)
+			this.root.setLinearVelocity({ x: lVeloc[0], y: lVeloc[1], z: lVeloc[2] });
+			
+		// Tell the physics engine to update our position
+		this.root.__dirtyPosition = true;
+		this.root.__dirtyRotation = true;
+	},
+	
+	handleCollision: function(mesh) {
+		if (mesh.instance) {
+			var instance = mesh.instance;
+			var ordinanceType = instance.toString().toLowerCase();
+			
+			var fireType = instance.alliance;
+			
+			if (this.options.alliance === 'self') {
+				this.takeHit(db.config.weapons[ordinanceType].damage);
+				console.warn('Hit by '+fireType+' '+ordinanceType);
+			}
+			else {
+				console.log('Enemy buggy hit with '+fireType+' '+ordinanceType);
+			}
+			
+			// Remove from world
+			instance.destruct();
+		}
 	},
 	
 	handleControls: function(delta) {
+		this.light.position.copy(this.root.position);
+		this.light.position.x -= 250;
+		this.light.position.z -= 250;
+		this.light.position.y = 500;
+		
 		if (this.controls && this.vehicle) {
 			// Reset position if the vehicle has fallen off the edge or reset is pressed
 			if (this.controls.reset || this.root.position.y < -100) {
-				this.root.position.set(0, db.config.game.startY, 0);
-				this.root.__dirtyPosition = true;
-		
-				this.root.rotation.set(0,0,0);
-				this.root.__dirtyRotation = true;
-		
-				this.root.setLinearVelocity({x: 0, y: 0, z: 0});
-				this.root.setAngularVelocity({x: 0, y: 0, z: 0});
+				this.reset();
 				return;
 			}
 	
 			// Handle steering
 			if (this.controls.direction !== null) {
-				this.controls.steering += this.controls.direction * db.config.buggy['steering_increment'];
-				if (this.controls.steering < -db.config.buggy['max_steering_radius']) this.controls.steering = -db.config.buggy['max_steering_radius'];
-				if (this.controls.steering > db.config.buggy['max_steering_radius']) this.controls.steering = db.config.buggy['max_steering_radius'];
+				if (this.controls.direction !== 0) {
+					this.controls.steering += this.controls.direction * db.config.buggy['steering_increment'];
+					if (this.controls.steering < -db.config.buggy['max_steering_radius']) this.controls.steering = -db.config.buggy['max_steering_radius'];
+					if (this.controls.steering > db.config.buggy['max_steering_radius']) this.controls.steering = db.config.buggy['max_steering_radius'];
+				}
+				else {
+					if (this.controls.steering < 0)
+						this.controls.steering = Math.min(this.controls.steering + db.config.buggy['steering_increment'], 0);
+					else
+						this.controls.steering = Math.max(this.controls.steering - db.config.buggy['steering_increment'], 0);
+				}
 			}
 			else {
-				if (this.controls.steering < 0)
-					this.controls.steering = Math.min(this.controls.steering + db.config.buggy['steering_increment'], 0);
-				else
-					this.controls.steering = Math.max(this.controls.steering - db.config.buggy['steering_increment'], 0);
+				// Adjust gamepad steering values
+				this.controls.steering *= db.config.buggy['max_steering_radius'];
 			}
+			
 			this.vehicle.setSteering(this.controls.steering, 0);
 			this.vehicle.setSteering(this.controls.steering, 1);
 			
@@ -248,6 +283,26 @@ db.Buggy = new Class({
 				this.handleFire();
 		}
 	},
+	
+	takeHit: function(damage) {
+		this.hp -= damage || 10;
+		if (this.hp <= 0) {
+			// Explode
+			console.log('Killed!');
+		}
+	},
+	
+	reset: function() {
+		this.root.position.set(0, db.config.game.startY, 0);
+		this.root.__dirtyPosition = true;
+
+		this.root.rotation.set(0,0,0);
+		this.root.__dirtyRotation = true;
+
+		this.root.setLinearVelocity({x: 0, y: 0, z: 0});
+		this.root.setAngularVelocity({x: 0, y: 0, z: 0});
+	},
+	
 	handleFire: function() {
 		var time = new Date().getTime();
 		if (this.controls.fire && (!this.lastFireTime[this.game.currentWeapon] || time-this.lastFireTime[this.game.currentWeapon] >= db.config.weapons[this.game.currentWeapon].interval)) {
@@ -267,7 +322,7 @@ db.Buggy = new Class({
 					game: this.game,
 					position: bulletPosition,
 					rotation: tankRotation,
-					type: 'friend'
+					alliance: 'friend'
 				});
 			}
 			else {
@@ -275,7 +330,7 @@ db.Buggy = new Class({
 					game: this.game,
 					position: bulletPosition,
 					rotation: tankRotation,
-					type: 'friend'
+					alliance: 'friend'
 				});
 			}
 
