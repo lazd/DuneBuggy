@@ -24,13 +24,13 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		var gamepadState = this.game.gamepad.gamepads[0].state;
 		
 		gamepad.direction = gamepadState['LEFT_STICK_X']*-1;
-		gamepad.forward = gamepadState['X'] || gamepadState['RB_SHOULDER'];
-		gamepad.reverse = gamepadState['A'] || gamepadState['LB_SHOULDER'];
+		gamepad.reverse = gamepadState['LEFT_TRIGGER'];
+		gamepad.forward = gamepadState['RIGHT_TRIGGER'];
 		
 		gamepad.fire = gamepadState['LB'];
 		gamepad.handBrake = gamepadState['RB'];
 		
-		gamepad.boost = gamepadState['RIGHT_STICK'];
+		gamepad.boost = gamepadState['X'];
 		
 		gamepad.reset = gamepadState['BACK'];
 		
