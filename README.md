@@ -13,19 +13,19 @@ Open `client/index.html` in your WebGL capable browser. You'll have to run a sim
 
 ### Controls
 
-**Accelerate:**  W / Up arrow
+**Accelerate:**  W / Up arrow / Gamepad Right trigger
 
-**Brake:** D / Down arrow / Space
+**Brake:** D / Down arrow / Space / Gamepad Right bumper
 
-**Turn left:** A / Left arrow
+**Turn left:** A / Left arrow / Gamepad left stick
 
-**Turn right:** D / Right arrow
+**Turn right:** D / Right arrow / Gamepad left stick
 
 **Switch weapons:** Q
 
-**Fire weapon:** Control / Left mouse button
+**Fire weapon:** Control / Left mouse button  / Gamepad left bumper
 
-**Nitrous:** Shift
+**Nitrous:** Shift / Gamepad X
 
 **Switch view:** V
 
@@ -56,6 +56,8 @@ Open `client/index.html` in your WebGL capable browser. You'll have to run a sim
 **Full-screen API** - For a real desktop gaming experience
 
 **Pointer lock API** - For smooth first-person style rotation of the turret
+
+**HTML5 Gamepad API** - For gamepad support
 
 
 # Software used
