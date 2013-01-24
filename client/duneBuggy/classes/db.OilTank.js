@@ -5,13 +5,12 @@ db.OilTank = new Class({
 		hp: 150,
 		mass: 0,
 		model: {
-			url: "duneBuggy/models/oil_tank.js",
+			name: "oil_tank",
 			yPosition: 1,
 			size: 0.2,
 			wrapTextures: false,
+			castShadow: true,
 			meshClass: Physijs.CylinderMesh
-		},
-		hitBox: new THREE.CylinderGeometry(10, 10, 12),
-		hitBoxYPosition: 6
+		}
 	}
 });

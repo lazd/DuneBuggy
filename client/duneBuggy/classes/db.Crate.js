@@ -7,6 +7,7 @@ db.Crate = new Class({
 			url: "duneBuggy/models/crate.js",
 			yPosition: 4,
 			size: db.config.size.crate,
+			castShadow: true,
 			wrapTextures: false
 		}
 	}

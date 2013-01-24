@@ -27,71 +27,6 @@ db.MapItem = new Class({
 		var options = this.options = jQuery.extend(true, {}, this.defaults, this.options, options);
 
 		this.destroyed = false;
-
-		// Load model
-		var loader = new THREE.JSONLoader();
-		loader.load(options.model.url, function(geometry, materials) {
-
-			if (options.model.textures) {
-				options.model.textures.forEach(function(texture, index) {
-					materials[index].map = THREE.ImageUtils.loadTexture(texture);
-					materials[index].map.flipY = false;
-				});
-			}
-			
-			// TODO: apply materials
-			materials.forEach(function(material, index) {
-				// Apply ambient light to all materials
-		        material.ambient = new THREE.Color(0xffffff);
-		        
-		        // Apply color
-				if (options.model.color !== undefined) {
-					material.color = options.model.color;
-				}
-
-		        // Wrap textures
-				if (options.model.wrapTextures && material.map) {
-					material.map.wrapS = THREE.RepeatWrapping;
-					material.map.wrapT = THREE.RepeatWrapping;
-				}
-				
-				materials[index] = Physijs.createMaterial(
-					material,
-					options.model.friction, // high friction
-					options.model.restitution // medium restitution
-				);
-			});
-			
-			
-			// Body
-			this.bodyMesh = new this.options.model.meshClass(geometry, new THREE.MeshFaceMaterial(materials), this.options.mass);
-			this.bodyMesh.scale.set(options.model.size, options.model.size, options.model.size);
-			
-			this.bodyMesh.flipSided = true;
-			this.bodyMesh.doubleSided = true;
-
-			// Hitbox
-			if (options.hitBox) {
-				this.hitBox = new THREE.Mesh(options.hitBox);
-				this.hitBox.visible = false;
-				this.hitBox.position.y = options.hitBoxYPosition || 0;
-				
-				this.options.game.scene.add(this.hitBox);
-			}
-
-			if (options.model.rotation)
-				this.bodyMesh.rotation.y = options.model.rotation;
-			
-			this.root = this.bodyMesh;
-			
-			// Set position/rotation
-			this.root.position.copy(options.position);
-			this.root.rotation.copy(options.rotation);
-
-			this.add();
-			this.root.setDamping(0.8, 1.0);
-		}.bind(this));
-	
 		this.hp = options.hp;
 	},
 
@@ -107,15 +42,69 @@ db.MapItem = new Class({
 
 		return this;
 	},
-
-	getModel: function() {
-		return this.bodyMesh;
-	},
-
-	getHitBox: function() {
-		return this.hitBox || this.bodyMesh;
-	},
 	
+	init: function() {
+		
+
+		// Use model
+		var geometry = this.options.game.models[this.options.model.name].geometry;
+		var materials = this.options.game.models[this.options.model.name].materials;
+		
+		if (this.options.model.textures) {
+			this.options.model.textures.forEach(function(texture, index) {
+				materials[index].map = THREE.ImageUtils.loadTexture(texture);
+				materials[index].map.flipY = false;
+			});
+		}
+		
+		// TODO: apply materials
+		materials.forEach(function(material, index) {
+			// Apply ambient light to all materials
+	        material.ambient = new THREE.Color(0xffffff);
+	        
+	        // Apply color
+			if (this.options.model.color !== undefined) {
+				material.color = this.options.model.color;
+			}
+
+	        // Wrap textures
+			if (this.options.model.wrapTextures && material.map) {
+				material.map.wrapS = THREE.RepeatWrapping;
+				material.map.wrapT = THREE.RepeatWrapping;
+			}
+			
+			materials[index] = Physijs.createMaterial(
+				material,
+				this.options.model.friction, // high friction
+				this.options.model.restitution // medium restitution
+			);
+		}.bind(this));
+		
+		// Body
+		this.root = new this.options.model.meshClass(geometry, new THREE.MeshFaceMaterial(materials), this.options.mass);
+		this.root.scale.set(this.options.model.size, this.options.model.size, this.options.model.size);
+		
+		this.root.flipSided = true;
+		this.root.doubleSided = true;
+		
+		// Shadow
+		if (this.options.model.castShadow)
+			this.root.castShadow = true;
+		
+		if (this.options.model.rotation)
+			this.root.rotation.y = this.options.model.rotation;
+		
+		// Set position/rotation
+		this.root.position.copy(this.options.position);
+		this.root.rotation.copy(this.options.rotation);
+
+		// Wtf?
+		this.root.setDamping(0.8, 1.0);
+	
+		
+		this.add();
+	},
+
 	getRoot: function() {
 		return this.root;
 	},
@@ -127,15 +116,6 @@ db.MapItem = new Class({
 
 		// rotation
 		this.root.rotation.y = rotation;
-	},
-
-	addTo: function(game) {
-		this.game = game;
-	
-		// Add body to scene
-		game.scene.add(this.getRoot());
-	
-		return this;
 	},
 
 	takeHit: function(damage) {
