@@ -95,4 +95,4 @@ THREEx.KeyboardState.prototype.pressed	= function(keyDesc)
 	return true;
 };
 
-db.Keyboard = new THREEx.KeyboardState();
+db.keyboard = new THREEx.KeyboardState();

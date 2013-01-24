@@ -1,14 +1,4 @@
-/** @namespace */
-var THREEx	= THREEx 		|| {};
-
-/**
- * - NOTE: it would be quite easy to push event-driven too
- *   - microevent.js for events handling
- *   - in this._onkeyChange, generate a string from the DOM event
- *   - use this as event name
-*/
-THREEx.MouseState = function()
-{
+db.Mouse = function() {
 	this.mousePosition = [0, 0];
 	
 	this.mouseButtons = {
@@ -16,6 +6,9 @@ THREEx.MouseState = function()
 		middle: false,
 		right: false
 	};
+	
+	this.rotationX = 0;
+	this.rotationY = 0;
 	
 	this._onMouseMove = this._onMouseMove.bind(this);
 	this._onMouseDown = this._onMouseDown.bind(this);
@@ -30,21 +23,14 @@ THREEx.MouseState = function()
 	document.oncontextmenu = function() { return false; };
 };
 
-/**
- * To stop listening of the keyboard events
-*/
-THREEx.MouseState.prototype.destroy	= function()
-{
+db.Mouse.prototype.destroy	= function() {
 	// unbind keyEvents
 	document.removeEventListener("mousemove", this._onMouseMove, false);
 	document.removeEventListener("mousedown", this._onMouseDown, false);
 	document.removeEventListener("mouseup", this._onMouseUp, false);
 };
 
-/**
- * to process the keyboard dom event
-*/
-THREEx.MouseState.prototype._onMouseDown = function(evt) {
+db.Mouse.prototype._onMouseDown = function(evt) {
 	if (evt.button == 0)
 		this.mouseButtons.left = true;
 	else if (evt.button == 1)
@@ -58,10 +44,7 @@ THREEx.MouseState.prototype._onMouseDown = function(evt) {
 	return false;
 };
 
-/**
- * to process the keyboard dom event
-*/
-THREEx.MouseState.prototype._onMouseUp = function(evt) {
+db.Mouse.prototype._onMouseUp = function(evt) {
 	if (evt.button == 0)
 		this.mouseButtons.left = false;
 	else if (evt.button == 1)
@@ -70,34 +53,23 @@ THREEx.MouseState.prototype._onMouseUp = function(evt) {
 		this.mouseButtons.middle = false;
 };
 
-/**
- * to process the keyboard dom event
-*/
-THREEx.MouseState.prototype._onMouseMove = function(evt) {
+db.Mouse.prototype._onMouseMove = function(evt) {
 	this.mousePosition[0] = evt.pageX;
 	this.mousePosition[1] = evt.pageY;
+	
+	var movementX = evt.movementX || evt.mozMovementX || evt.webkitMovementX || 0;
+	var movementY = evt.movementY || evt.mozMovementY || evt.webkitMovementY || 0;
+	
+	this.rotationX = this.rotationX + movementX*-1 * Math.PI/1024;
+	this.rotationY = this.rotationY + movementY*-1 * Math.PI/1024;
 };
 
-/**
- * query keyboard state to know if a key is pressed of not
- *
- * @param {String} keyDesc the description of the key. format : modifiers+key e.g shift+A
- * @returns {Boolean} true if the key is pressed, false otherwise
-*/
-THREEx.MouseState.prototype.buttons = function()
-{
+db.Mouse.prototype.buttons = function() {
 	return this.mouseButtons;
 };
 
-/**
- * query keyboard state to know if a key is pressed of not
- *
- * @param {String} keyDesc the description of the key. format : modifiers+key e.g shift+A
- * @returns {Boolean} true if the key is pressed, false otherwise
-*/
-THREEx.MouseState.prototype.position = function()
-{
+db.Mouse.prototype.position = function() {
 	return this.mousePosition;
 };
 
-db.Mouse = new THREEx.MouseState();
+db.mouse = new db.Mouse();

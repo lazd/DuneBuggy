@@ -15,9 +15,10 @@ db.Buggy.prototype.keyMap = {
 
 
 db.Buggy.prototype.controlsLoopCb = function(delta, now) {
-	var keyboard = db.Keyboard;
-	var mouse = db.Mouse;
+	var keyboard = db.keyboard;
+	var mouse = db.mouse;
 	
+	// Gamepad controls
 	var hasGamepad = !!this.game.gamepad.gamepads.length;
 	var gamepad = {};
 	if (hasGamepad) {
@@ -35,50 +36,66 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		gamepad.reset = gamepadState['BACK'];
 		
 	}
-	
-	var tankPosition = this.getRoot().position;
-	
-	// TODO: Reliably get tank rotation here or find another way to position the turret
-	// var tankRotation = this.getRoot().rotation.y+Math.PI/2;
-	var tankRotation = this.getRoot().worldY+Math.PI/2;
-	
-	var turretRotation = this.getTurret().rotation.y;
-	
-	var mouse2D = mouse.position();
-	
-	// Turret follows mouse from overhead view
-	if (this.game.options.cameraType == 'overhead') {
-		var tank = [window.innerWidth/2, window.innerHeight/2];
-	
-		var z = tank[1]-mouse2D[1];
-		var x = tank[0]-mouse2D[0];
-	
-		var targetAngle = Math.atan2(x, z);
-	
-		this.getTurret().rotation.y = targetAngle - tankRotation;
-	}
-	else if (this.game.options.cameraType == 'chase' && this.game.options.cameraFollow == 'tank') {
-		// Find mouse in 3D space
-		var mouse3D = this.game.get3DCoords(mouse2D[0], mouse2D[1]);
-    
-		// Get direction
-		var x = tankPosition.x-mouse3D.x;
-		var z = tankPosition.z-mouse3D.z;
-		var targetAngle = Math.atan2(x, z);
-	  
-		this.getTurret().rotation.y = targetAngle - tankRotation + Math.PI*1.5;
-	}
-	else if (this.game.pointerLocked) {
-		// do nothing
-		if (this.game.customRotation !== undefined)
-			this.getTurret().rotation.y = this.game.customRotation - tankRotation;
+
+	// Turret positioning
+	if (this.game.pointerLocked) {
+		this.getTurret().rotation.y = mouse.rotationX;
+		
+		// Needs to set Z or X as a function of Y....
+		this.getTurret().rotation.x = -mouse.rotationY;
 	}
 	else {
-		var screenVal = (window.innerWidth/2-mouse2D[0])/window.innerWidth;
+		// Tank position
+		var buggy = this.getRoot()
+		buggy.updateMatrixWorld();
+		var turretPosition = buggy.matrixWorld.multiplyVector3(this.turretOffset.clone());
 		
-		var targetAngle = screenVal * Math.PI*2;
+		// Mouse position
+		var mouse2D = mouse.position();
+		var mouse3D = this.game.get3DCoords(mouse2D[0], mouse2D[1]);
+	
+		// Cast a ray between the camera and the mouse position
+		var ray = this.game.createRay(this.game.camera.position, mouse3D);
 		
-		this.getTurret().rotation.y = targetAngle - tankRotation - Math.PI*1.5;
+		var targetPoint = null;
+		
+		// Find where it hits the ground
+		var intersections = ray.intersectObject(this.game.ground.root);
+		if (intersections.length) {
+			targetPoint = intersections[0].point;
+		}
+		else {
+			targetPoint = mouse3D;
+		}
+	
+		// Draw debug line (laser)
+		this.game.debugLine.geometry.vertices[0].copy(turretPosition);
+		this.game.debugLine.geometry.vertices[1].copy(targetPoint);
+		this.game.debugLine.geometry.verticesNeedUpdate = true;
+		
+		var matrix = new THREE.Matrix4();
+		matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
+		this.turretRotation.setEulerFromRotationMatrix(matrix, 'XYZ');
+		
+		// Point the turret at the target
+		var turret = this.getTurret();
+		
+		// Look at the target
+		turret.updateMatrixWorld();
+		turret.matrixWorld.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
+		turret.rotation.setEulerFromRotationMatrix(turret.matrixWorld, turret.eulerOrder);
+		
+		/*
+		// Which matrix should be be fing with?
+		turret.updateMatrix();
+		turret.matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
+		turret.rotation.setEulerFromRotationMatrix(turret.matrix, turret.eulerOrder);
+		*/
+		
+		// Damn, turret.rotation.y only goes between -Pi/2 and Pi/2!
+		// console.log(turret.rotation.y.toFixed(1), buggy.eulerRotation.y.toFixed(1));
+		// Take tank rotation into account somehow?
+		// turret.rotation.y -= buggy.eulerRotation.y;
 	}
 	
 	// Steering
