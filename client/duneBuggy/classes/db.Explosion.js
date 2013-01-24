@@ -70,7 +70,6 @@
 
 			// Start position
 			this.particleSystem.position.copy(options.position);
-			this.particleSystem.position.y = 0;
 
 			// Add to game
 			this.game = options.game;
