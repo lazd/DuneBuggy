@@ -66,8 +66,7 @@ db.Radar = new Class({
 		// Follow turret
 		var rotation;
 		if (this.options.follow === 'tank') {
-			rotation = this.game.tank.getRoot().worldY || 0;
-			// rotation = this.game.tank.getRoot().position.y || 0;
+			rotation = this.game.tank.getRoot().eulerRotation.y || 0;
 		}
 		else if (this.options.follow === 'turret')
 			rotation = this.game.tank.getRoot().rotation.y + this.game.tank.getTurret().rotation.y;
