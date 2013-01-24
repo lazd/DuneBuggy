@@ -104,9 +104,10 @@ io.sockets.on('connection', function (socket) {
 				name: message.name,
 				pos: pos,
 				rot: [0, 0, 0],
-				tRot: 0,
+				tRot: [0, 0, 0],
 				aVeloc: [0, 0, 0],
-				lVeloc: [0, 0, 0]
+				lVeloc: [0, 0, 0],
+				interp: false // Not really necsesary here, we're telling the client itself to move
 			};
 			
 			socket.emit('move', packet);
@@ -198,9 +199,10 @@ io.sockets.on('connection', function (socket) {
 				name: name,
 				pos: newPos,
 				rot: [0, 0, 0],
-				tRot: 0,
+				tRot: [0, 0, 0],
 				aVeloc: [0, 0, 0],
-				lVeloc: [0, 0, 0]
+				lVeloc: [0, 0, 0],
+				interp: false
 			};
 			
 			players[name].pos = newPos;
@@ -263,7 +265,8 @@ io.sockets.on('connection', function (socket) {
 					rot: message.rot,
 					tRot: message.tRot,
 					aVeloc: message.aVeloc,
-					lVeloc: message.lVeloc
+					lVeloc: message.lVeloc,
+					interp: true
 				});
 			}
 			else {
