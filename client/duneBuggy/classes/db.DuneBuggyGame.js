@@ -20,7 +20,6 @@ db.DuneBuggyGame = new Class({
 		var that = this;
 		this.enemyBullets = [];
 		this.mapItems = [];
-		this.customRotation = Math.PI/2;
 		this.currentWeapon = 'bullet';
 		
 		// TODO: abstract key listening
@@ -34,17 +33,6 @@ db.DuneBuggyGame = new Class({
 			else if (evt.which == 80)
 				that.sound.enabled = !that.sound.enabled;
 		});
-		
-		$(document).on('mousemove', function(e) {
-			e = e.originalEvent;
-			var movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-			var movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-			
-			if (this.pointerLocked && this.cameraControls.options.type == 'chase' && this.cameraControls.options.chase.follow == 'turret') {
-				var targetAngle = this.customRotation + movementX*-1 * Math.PI/1024;
-				this.customRotation = targetAngle;
-			}
-		}.bind(this));
 		
 		/******************
 		Player setup
@@ -129,8 +117,8 @@ db.DuneBuggyGame = new Class({
 					game: that,
 					alliance: 'enemy',
 					name: enemyInfo.name,
-					position: new THREE.Vector3(enemyInfo.pos[0], 0, enemyInfo.pos[1]),
-					rotation: enemyInfo.rot,
+					position: new THREE.Vector3(enemyInfo.pos[0], enemyInfo.pos[1], enemyInfo.pos[2]),
+					rotation: new THREE.Vector3(enemyInfo.rot[0], enemyInfo.rot[1], enemyInfo.rot[2]),
 					turretRotation: enemyInfo.tRot
 				});
 
@@ -144,7 +132,8 @@ db.DuneBuggyGame = new Class({
 		******************/
 		// Sound
 		this.sound = new db.Sound({
-			sounds: this.options.sounds
+			enabled: this.options.sound.enabled,
+			sounds: this.options.sound.sounds
 		});
 		
 		/******************
@@ -159,14 +148,20 @@ db.DuneBuggyGame = new Class({
 		this.light.position.set(2200, 2200, -4000);
 		this.scene.add(this.light);
 		
-		// Load a map
-		this.loadMap(db.maps['Lollypop Land']);
-		
 		this.camera.position.set(0,300,0);
 		this.camera.lookAt(new THREE.Vector3(0,0,0));
 		
-		// Start rendering
-		this.start();
+		var geometry = new THREE.Geometry();
+		geometry.vertices = [
+			new THREE.Vector3(0, 0, 0),
+			new THREE.Vector3(0, 300, 0)
+		];
+		var lineStyle = {
+			color: 0xCC0000,
+			opacity: 0.75
+		};
+		this.debugLine = new THREE.Line(geometry, new THREE.LineBasicMaterial(lineStyle));
+		this.scene.add(this.debugLine);
 	},
 	
 	initialize: function() {
@@ -190,7 +185,7 @@ db.DuneBuggyGame = new Class({
 			tank: this.tank,
 			scene: this.scene,
 			camera: this.camera,
-			type: this.options.cameraType
+			type: this.options.camera.type
 		});
 		
 		// Catch fire events
@@ -202,9 +197,6 @@ db.DuneBuggyGame = new Class({
 			tank: this.tank,
 			server: this.options.comm.server
 		});
-		
-		// Add radar
-		this.radar = new db.Radar({ game: this });
 		
 		this.comm.on('fire', this.handleEnemyFire);
 		
@@ -223,6 +215,9 @@ db.DuneBuggyGame = new Class({
 		/******************
 		Rendering hooks
 		******************/
+		// Calcualte the euler rotation for radar and friends
+		this.hook(this.tank.updateEulerRotation.bind(this.tank));
+		
 		// Evaluate keyboard controls
 		this.hook(this.tank.controlsLoopCb.bind(this.tank));
 		
@@ -235,8 +230,17 @@ db.DuneBuggyGame = new Class({
 		/******************
 		Initialization
 		******************/
+		// Add radar
+		this.radar = new db.Radar({ game: this });
+		
 		// Start communication
 		this.comm.connected();
+		
+		// Load a map
+		this.loadMap(db.maps['Lollypop Land']);
+		
+		// Start rendering
+		this.start();
 	},
 
 	destruct: function() {
@@ -260,10 +264,11 @@ db.DuneBuggyGame = new Class({
 			console.log('Server reset position');
 			
 			// Return to center
-			this.tank.setPosition(message.pos, message.rot, message.rot+message.tRot, message.aVeloc, message.lVeloc, false);
+			this.tank.setPosition(message.pos, message.rot, message.tRot, message.aVeloc, message.lVeloc, false); // Never interpolate our own movement
 		}
 		else {
-			if (!this.enemies.do(message.name, 'setPosition', [message.pos, message.rot, message.rot+message.tRot, message.aVeloc, message.lVeloc, true])) {
+			// Enemy moved
+			if (!this.enemies.do(message.name, 'setPosition', [message.pos, message.rot, message.tRot, message.aVeloc, message.lVeloc, message.interp])) {
 				this.enemies.add(message);
 			}
 		}
@@ -274,7 +279,7 @@ db.DuneBuggyGame = new Class({
 		
 		new db.Explosion({
 			game: this,
-			position: enemy.getPosition()
+			position: enemy.getPosition().pos
 		});
 		
 		if (message.killer == this.player.name)
@@ -296,22 +301,23 @@ db.DuneBuggyGame = new Class({
 	handleEnemyFire: function(message) {
 		var time = new Date().getTime();
 		
-		var bulletPosition = new THREE.Vector3(message.pos[0], 0, message.pos[1]);
+		var bulletPosition = new THREE.Vector3(message.pos[0], message.pos[1], message.pos[2]);
+		var bulletRotation = new THREE.Vector3(message.rot[0], message.rot[1], message.rot[2]);
 		
 		var bulletModel;
 		if (message.type == 'missile') {
 			bulletModel = new db.Missile({
 				game: this,
 				position: bulletPosition,
-				rotation: message.rot,
+				rotation: bulletRotation,
 				alliance: 'enemy'
 			});
 		}
 		else {
 			bulletModel = new db.Bullet({
 				game: this,
-				position: new THREE.Vector3(message.pos[0], 0, message.pos[1]),
-				rotation: message.rot,
+				position: bulletPosition,
+				rotation: bulletRotation,
 				alliance: 'enemy'
 			});
 		}
@@ -363,9 +369,6 @@ db.DuneBuggyGame = new Class({
 		
 		// Restore health
 		this.player.hp = 100;
-		
-		// Reset rotation
-		this.customRotation = Math.PI/2;
 		
 		console.warn('You were killed by %s', otherPlayerName);
 	},
