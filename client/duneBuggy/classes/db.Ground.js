@@ -10,13 +10,11 @@
 			// handle parameters
 			this.options = options = jQuery.extend({
 				position: new THREE.Vector3(0, 0, 0),
-				rotation: 0
+				rotation: new THREE.Vector3(0, 0, 0)
 			}, options);
 	
-			this.groundMeshes = [];
-	
-			var geometry = this.groundGeometry = this.game.models.terrain.geometry;
-			var materials = this.groundGeometry = this.game.models.terrain.materials;
+			var geometry = this.game.models.terrain.geometry;
+			var materials = this.game.models.terrain.materials;
 	
 			// TODO: apply materials
 			materials.forEach(function(material, index) {
@@ -31,32 +29,11 @@
 				);
 			});
 			
-			this.groundGeometry = geometry;
-			this.groundMaterials = materials;
-			
-			var xSpacingMax = 2326.48;
-			var xSpacingMin = -2326.48;
-			var zSpacingMax = 2339.54;
-			var zSpacingMin = -2419.3;
-			var yHeight = 20;
-			
-			this.makeGround(new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0));
-			
-			// this.makeGround(new THREE.Vector3(xSpacingMax/2,yHeight,zSpacingMax/2), new THREE.Vector3(0,Math.PI/4,0));
-			//this.makeGround(new THREE.Vector3(xSpacingMax,yHeight,xSpacingMax), new THREE.Vector3(0,0,0));
-			//this.makeGround(new THREE.Vector3(xSpacingMax,yHeight,zSpacingMin-xSpacingMax+zSpacingMin), new THREE.Vector3(0,-Math.PI,0));
-			//this.makeGround(new THREE.Vector3(xSpacingMin,yHeight,zSpacingMax), new THREE.Vector3(0,0,0));
-			//this.makeGround(new THREE.Vector3(xSpacingMin,yHeight,zSpacingMin), new THREE.Vector3(0,0,0));
-			
-		},
-		makeGround: function(position, rotation) {
-			var mesh = new Physijs.ConcaveMesh(this.groundGeometry, new THREE.MeshFaceMaterial(this.groundMaterials), 0);
-			mesh.receiveShadow = true;
-			mesh.position.copy(position);
-			mesh.rotation.copy(rotation);
-			
-			this.groundMeshes.push(mesh)
-			this.options.game.scene.add(mesh);
+			this.root = new Physijs.ConcaveMesh(geometry, new THREE.MeshFaceMaterial(materials), 0);
+			this.root.receiveShadow = true;
+			this.root.position.copy(options.position);
+			this.root.rotation.copy(options.rotation);
+			this.options.game.scene.add(this.root);
 		}
 	});
 
