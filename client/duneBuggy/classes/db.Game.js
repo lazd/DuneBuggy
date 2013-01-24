@@ -93,7 +93,7 @@ db.Game = new Class({
 		});
 		
 		$(document).on('fullscreenchange mozfullscreenchange webkitfullscreenchange', this.handleFullscreenChange);
-		
+ 
 		$(document).on('pointerlockchange mozpointerlockchange webkitpointerlockchange', this.handlePointerLockChange);
 		$(document).on('pointerlockerror mozpointerlockerror webkitpointerlockerror', this.handlePointerLockError);
  
@@ -141,10 +141,11 @@ db.Game = new Class({
 		return (screen.width === window.outerWidth && screen.height === window.outerHeight);
 	},
 	
+
 	handleFullscreenChange: function(evt) {
 		if (this.isFullScreen()) {
 			console.log('Full screen mode entered!');
-		
+
 			this.el.requestPointerLock = this.el.requestPointerLock || this.el.mozRequestPointerLock || this.el.webkitRequestPointerLock;
 			this.el.requestPointerLock();
 		}
@@ -152,7 +153,7 @@ db.Game = new Class({
 			console.log('Full screen mode exited!');
 		}
 	},
-	
+
 	toggleFullScreen: function() {
 		if (!this.isFullScreen()) {
 			if (document.documentElement.requestFullScreen) {
@@ -193,6 +194,7 @@ db.Game = new Class({
 		console.log("Error while locking pointer.");
 		this.pointerLocked = false;
 	},
+
 
 	fitWindow: function() {
 		// Size the rendere to match the window size
@@ -320,9 +322,11 @@ db.Game = new Class({
 		t = startVector.y / -(dirVector.y);
 
 		// Find goal point
-		goalVector.set(startVector.x + t * dirVector.x,
-		startVector.y + t * dirVector.y,
-		startVector.z + t * dirVector.z);
+		goalVector.set(
+			startVector.x + t * dirVector.x,
+			startVector.y + t * dirVector.y,
+			startVector.z + t * dirVector.z
+		);
 		
 		return goalVector;
 	},
