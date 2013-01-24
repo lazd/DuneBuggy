@@ -5,6 +5,8 @@ db.Buggy = new Class({
 	construct: function(options) {
 		this.options = options;
 		
+		this.alliance = options.alliance;
+		
 		this.game = options.game;
 		
 		this.bind(this.handleControls);
@@ -16,6 +18,18 @@ db.Buggy = new Class({
 		
 		// Set start hp
 		this.hp = db.config.buggy.hp;
+		
+		// Turret's current rotation relative to the world
+		this.turretRotation = new THREE.Vector3();
+		
+		// Turrets world position
+		this.turretPosition = new THREE.Vector3();
+		
+		// Offset of center of turret from buggy
+		this.turretOffset = new THREE.Vector3(0,14,-4.75);
+		
+		// Offset bullet start location
+		this.bulletOffset = new THREE.Vector3(0,2,10);
 		
 		this.controls = {
 			power: null,
@@ -66,23 +80,30 @@ db.Buggy = new Class({
 		var car = this.options.game.models.buggy_body.geometry;
 		var materials = this.options.game.models.buggy_body.materials;
 		var turret = this.options.game.models.buggy_turret.geometry;
-		var wheel = this.options.game.models.buggy_wheel.geometry;
+		var wheelLeft = this.options.game.models.buggy_wheelLeft.geometry;
+		var wheelRight = this.options.game.models.buggy_wheelRight.geometry;
 		
+		// Make texture map correctly
 		materials[0].map.flipY = false;
-		materials[0].side = THREE.DoubleSide; // make it so we can't see through the bottom
+		
+		// Make it so we can't see through the bottom
+		materials[0].side = THREE.DoubleSide;
 	
+		// Use the materials from the buggy
 		var material = new THREE.MeshFaceMaterial(materials);
 	
-		// Create the turret, position it on top of the buggy
-		this.turret = new THREE.Mesh(turret, material);
-		this.turret.position.z = -4.5;
-	
+		// Create the mesh representing the buggy
 		var mesh = this.root = new Physijs.ConvexMesh(
 			car,
 			material,
 			db.config.buggy['mass']
 		);
-	
+		
+		mesh.instance = this;
+
+		// Create the turret, position it on top of the buggy
+		this.turret = new THREE.Mesh(turret, material);
+		this.turret.position.copy(this.turretOffset);
 		this.root.add(this.turret);
 
 		if (options.position)
@@ -112,7 +133,7 @@ db.Buggy = new Class({
 	
 			// TODO: flip wheel for left/right sides
 			vehicle.addWheel(
-				wheel,
+				leftWheel ? wheelLeft : wheelRight,
 				material,
 				/* connection_point */ new THREE.Vector3(
 						leftWheel ? -axle_width : axle_width,
@@ -157,6 +178,13 @@ db.Buggy = new Class({
 		return this.turret;
 	},
 
+	getPosition: function() {
+		return {
+			pos: this.root.position.clone(),
+			rot: this.root.rotation.clone()
+		};
+	},
+
 	setPosition: function (position, rotation, tRot, aVeloc, lVeloc, interpolate) {
 		var posInterpolation = 0.05;
 		var rotInerpolation = 0.50;
@@ -164,7 +192,7 @@ db.Buggy = new Class({
 		if (interpolate) {
 			// Interpolate position by adding the difference of the calulcated position and the position sent by the authoritative client
 			var newPositionVec = new THREE.Vector3(position[0], position[1], position[2]);
-			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));			
+			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));
 			this.root.position.addSelf(posErrorVec);
 		}
 		else {
@@ -178,7 +206,7 @@ db.Buggy = new Class({
 		
 		// Set turret rotation
 		if (tRot !== undefined)
-			this.turret.rotation.y = tRot;
+			this.turret.rotation.set(tRot[0], tRot[1], tRot[2]);
 			
 		if (aVeloc !== undefined && this.root.setAngularVelocity)
 			this.root.setAngularVelocity({ x: aVeloc[0], y: aVeloc[1], z: aVeloc[2] });
@@ -192,26 +220,46 @@ db.Buggy = new Class({
 	},
 	
 	handleCollision: function(mesh) {
-		if (mesh.instance) {
+		if (mesh.instance && mesh.instance.toString() !== 'Buggy') {
 			var instance = mesh.instance;
 			var ordinanceType = instance.toString().toLowerCase();
 			
-			var fireType = instance.alliance;
+			var bulletAlliance = instance.alliance;
 			
-			if (this.options.alliance === 'self') {
-				this.takeHit(db.config.weapons[ordinanceType].damage);
-				console.warn('Hit by '+fireType+' '+ordinanceType);
-			}
-			else {
-				console.log('Enemy buggy hit with '+fireType+' '+ordinanceType);
+			if (this.options.alliance === 'enemy' && bulletAlliance === 'self') {
+				console.log('Enemy buggy hit with '+ordinanceType);
+				
+				this.game.sound.play('hit_tank', this.game.getVolumeAt(this.getRoot().position));
+				this.game.comm.hit(this.getName(), ordinanceType);
 			}
 			
-			// Remove from world
-			instance.destruct();
 		}
 	},
 	
+	getName: function() {
+		return this.options.name || 'self';
+	},
+	
+	updateEulerRotation: function() {
+		// Update the matrix
+		this.root.updateMatrix();
+
+		// Extract just the rotation from the matrix
+		var rotation_matrix = new THREE.Matrix4();
+		rotation_matrix.extractRotation(this.root.matrix);
+
+		// Convert the rotation to euler coordinates with the proper order
+		var rotation = new THREE.Vector3();
+		rotation.setEulerFromRotationMatrix(rotation_matrix, 'XZY');
+		
+		this.root.eulerRotation = rotation;
+		
+		// Store position of bullet relative to the world
+		this.bulletPosition = this.turret.matrixWorld.multiplyVector3(this.bulletOffset.clone());
+	},
+	
 	handleControls: function(delta) {
+		// Position shadow light
 		this.light.position.copy(this.root.position);
 		this.light.position.x -= 250;
 		this.light.position.z -= 250;
@@ -306,31 +354,33 @@ db.Buggy = new Class({
 	handleFire: function() {
 		var time = new Date().getTime();
 		if (this.controls.fire && (!this.lastFireTime[this.game.currentWeapon] || time-this.lastFireTime[this.game.currentWeapon] >= db.config.weapons[this.game.currentWeapon].interval)) {
-			var tankMesh = this.getRoot();
-			var tankPosition = tankMesh.position.clone();
-			var tankRotation = tankMesh.rotation.clone();
-			// var turretRotation = tankRotation.worldY + this.turret.rotation.y;
-			var turretRotation = this.turret.rotation.y;
+			var buggy = this.getRoot();
+			var tankPosition = buggy.position.clone();
+			var tankRotation = buggy.eulerRotation.clone();
 			
 			var type = this.game.currentWeapon;
-			var bulletPosition = tankPosition.clone();
 
 			// Create ordinance
 			var bulletModel;
+			var bulletPosition;
 			if (type == 'missile') {
+				bulletPosition = tankPosition;
+				bulletRotation = tankRotation;
 				bulletModel = new db.Missile({
 					game: this.game,
 					position: bulletPosition,
-					rotation: tankRotation,
-					alliance: 'friend'
+					rotation: bulletRotation,
+					alliance: 'self'
 				});
 			}
 			else {
+				bulletPosition = this.bulletPosition;
+				bulletRotation = this.turretRotation;
 				bulletModel = new db.Bullet({
 					game: this.game,
 					position: bulletPosition,
-					rotation: tankRotation,
-					alliance: 'friend'
+					rotation: bulletRotation,
+					alliance: 'self'
 				});
 			}
 
@@ -342,13 +392,11 @@ db.Buggy = new Class({
 			});
 
 			// Emit event
-			/*
 			this.trigger('fire', {
-				pos: [bulletPosition.x, bulletPosition.z],
-				rot: turretRotation,
+				pos: [bulletPosition.x, bulletPosition.y, bulletPosition.z],
+				rot: [bulletRotation.x, bulletRotation.y, bulletRotation.z],
 				type: type
 			});
-			*/
 			
 			var soundInfo = db.config.weapons[this.game.currentWeapon].sound;
 			this.game.sound.play(soundInfo.file, soundInfo.volume);
@@ -361,10 +409,12 @@ db.Buggy = new Class({
 		var root = this.getRoot();
 		var turret = this.getTurret();
 		
+		// Position & rotation
 		var tankPosition = (root && root.position) || new THREE.Vector3();
 		var tankRotation = (root && root.rotation) || new THREE.Vector3();
 		var turretRotation = (turret && turret.rotation) || new THREE.Vector3();
 
+		// Velocity
 		var linearVelocity = (root.getLinearVelocity && root.getLinearVelocity()) || new THREE.Vector3();
 		var angularVelocity = (root.getAngularVelocity && root.getAngularVelocity()) || new THREE.Vector3();
 		
@@ -373,7 +423,7 @@ db.Buggy = new Class({
 			rot: [tankRotation.x, tankRotation.y, tankRotation.z],
 			aVeloc: [angularVelocity.x, angularVelocity.y, angularVelocity.z],
 			lVeloc: [linearVelocity.x, linearVelocity.y, linearVelocity.z],
-			tRot: turretRotation.y
+			tRot: [turretRotation.x, turretRotation.y, turretRotation.z]
 		};
 	}
 });
