@@ -12,8 +12,10 @@ You should have received a copy of the GNU General Public License along with thi
 var db = {
 	maps: {},
 	config: {
-		cameraType: 'chase',
-		cameraFollow: 'turret',
+		camera: {
+			type: 'chase',
+			follow: 'tank'
+		},
 		game: {
 			startY: 140
 		},
@@ -29,7 +31,17 @@ var db = {
 			enemy: 0x880000
 		},
 		sound: {
-			silentDistance: 1500
+			enabled: false,
+			silentDistance: 1500,
+			sounds: {
+				fire_bullet: "duneBuggy/sounds/fire_bullet.ogg",
+				fire_missile: "duneBuggy/sounds/fire_missile.ogg",
+				fire_enemy: "duneBuggy/sounds/fire_enemy.ogg",
+				hit_building: "duneBuggy/sounds/hit_building.ogg",
+				hit_tank: "duneBuggy/sounds/hit_tank.ogg",
+				hit_tank_self: "duneBuggy/sounds/hit_tank_self.ogg",
+				explosion: "duneBuggy/sounds/explosion.ogg"
+			}
 		},
 		buggy: {
 			hp: 100,
@@ -55,9 +67,14 @@ var db = {
 			bullet: {
 				interval: 125,
 				time: 2000,
-				speed: 350,
+				impulse: 25,
 				damage: 10,
-				mass: 0.1,
+				mass: 0.01,
+				dimensions: {
+					width: 1, // 0.5
+					height: 1, // 0.5
+					depth: 4 // 2
+				},
 				sound: {
 					file: 'fire_bullet',
 					volume: 0.85
@@ -85,19 +102,13 @@ var db = {
 		models: [
 			'buggy_body',
 			'buggy_turret',
-			'buggy_wheel',
+			'buggy_turretMount',
+			'buggy_wheelLeft',
+			'buggy_wheelRight',
 			'terrain',
-			'missilePhoenix'
-		],
-		sounds: {
-			fire_bullet: "duneBuggy/sounds/fire_bullet.ogg",
-			fire_missile: "duneBuggy/sounds/fire_missile.ogg",
-			fire_enemy: "duneBuggy/sounds/fire_enemy.ogg",
-			hit_building: "duneBuggy/sounds/hit_building.ogg",
-			hit_tank: "duneBuggy/sounds/hit_tank.ogg",
-			hit_tank_self: "duneBuggy/sounds/hit_tank_self.ogg",
-			explosion: "duneBuggy/sounds/explosion.ogg"
-		}
+			'missilePhoenix',
+			'barrel'
+		]
 	}
 };
 
