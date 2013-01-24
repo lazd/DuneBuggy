@@ -13,7 +13,7 @@
 			this.alliance = options.alliance;
 			
 			// Set missile color based on alliance
-			var missileColor = this.alliance === 'friend' ? db.config.colors.friend : db.config.colors.enemy;
+			var missileColor = this.alliance === 'friend' || this.alliance === 'self' ? db.config.colors.friend : db.config.colors.enemy;
 			
 			var geometry = this.game.models.missilePhoenix.geometry;
 			
@@ -22,12 +22,9 @@
 	
 			// Body
 			this.root = new Physijs.CylinderMesh(geometry, material, db.config.weapons.missile.mass);
+			this.root.scale.set(this.game.options.size.missile, this.game.options.size.missile, this.game.options.size.missile);
 			this.root.instance = this;
 
-			// The missile is huge, so scale it down
-			// TODO: re-export with proper size
-			this.root.scale.set(db.config.size.missile, db.config.size.missile, db.config.size.missile);
-			
 			// Missiles cast shadows
 			this.root.castShadow = true;
 			//this.root.receiveShadow = true;
@@ -35,6 +32,11 @@
 			// Set initial position
 			this.root.position.copy(options.position);
 			this.root.rotation.copy(options.rotation);
+			
+			// Oddly enough, the only way to get CylinderMesh to behave is to point the missile in the Y or X direction.
+			// As a result, we need to tilt the missile down and give it Y velocity instead of Z
+			// Results in inconsistent application of that damn matrix! Like without updateMatrix
+			// this.root.rotation.x -= Math.PI/2;
 			
 			// Temporary
 			this.root.position.y += 25;
@@ -46,7 +48,13 @@
 			this.inherited(arguments);
 			
 			// Temporary
-			this.root.setLinearVelocity({x: 0, y: 100, z: 0}); // must set after added to scene
+			this.root.updateMatrix();
+			
+			var rotation_matrix = new THREE.Matrix4();
+			rotation_matrix.extractRotation(this.root.matrix);
+			var force_vector = new THREE.Vector3(0, 250, 0);
+			var final_force_vector = rotation_matrix.multiplyVector3(force_vector);
+			this.root.applyCentralImpulse(final_force_vector);
 		},
 	
 		setPosition: function(position, rotation) {
