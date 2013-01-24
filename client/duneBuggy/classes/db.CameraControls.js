@@ -15,7 +15,7 @@ db.CameraControls = new Class({
 				follow: 'tank'
 			},
 			overhead: {
-				distance: 2000,
+				height: 400,
 				rotate: false
 			}
 		}, options);
@@ -32,7 +32,7 @@ db.CameraControls = new Class({
 		// Follow tank with camera
 		if (this.options.type == 'overhead') {
 			this.options.camera.position.x = tankPosition.x;
-			this.options.camera.position.y = this.options.overhead.distance;
+			this.options.camera.position.y = this.options.overhead.height;
 			this.options.camera.position.z = tankPosition.z;
 			
 			// Rotate camera with tank
@@ -47,7 +47,7 @@ db.CameraControls = new Class({
 			if (this.options.chase.follow == 'tank') {
 				// Update the matrix before we calculate
 				tankMesh.updateMatrixWorld();
-
+				
 				var newCameraPosition = tankMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ));
 				
 				// Fixed Y position
@@ -61,8 +61,8 @@ db.CameraControls = new Class({
 				// 	Math.toDegrees(tankMesh.rotation.y).toFixed(1),
 				// 	Math.toDegrees(tankMesh.rotation.z).toFixed(1)
 				// );
-				// this.options.camera.position.x = tankPosition.x+Math.sin(tankMesh.rotation.y+Math.PI)*this.options.chase.trailX;
-				// this.options.camera.position.z = tankPosition.z+Math.cos(tankMesh.rotation.y+Math.PI)*this.options.chase.trailZ;
+				// this.options.camera.position.x = tankPosition.x+Math.sin(rotation.y+Math.PI)*this.options.chase.trailX;
+				// this.options.camera.position.z = tankPosition.z+Math.cos(rotation.y+Math.PI)*this.options.chase.trailZ;
 			}
 			else if (this.options.chase.follow == 'turret') {
 				// Update the matrix before we calculate
