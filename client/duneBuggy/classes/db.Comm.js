@@ -23,9 +23,6 @@ db.Comm = new Class({
 		var that = this;
 		
 		this.lastMessageTime = 0;
-		this.lastPosition = [0, 0];
-		this.lastRotation = 0;
-		this.lastTRotation = 0;
 	
 		// Create socket connection
 		this.socket = io.connect(options.server);
@@ -80,28 +77,21 @@ db.Comm = new Class({
 		if (time-this.lastMessageTime >= db.config.comm.interval) {
 			var tankPosition = this.tank.getPositionPacket();
 
+			// TODO: Figure out if tank or turret actually moved
+			var tankMoved = true;
+			
 			// If tank moved, send packet
-			if (Math.abs(this.lastRotation-tankPosition.rot) >= 0.01 ||
-				Math.abs(this.lastTRotation-tankPosition.tRot) >= 0.01 ||
-				Math.abs(this.lastPosition[0]-tankPosition.pos[0]) >= 0.01 ||
-				Math.abs(this.lastPosition[1]-tankPosition.pos[1]) >= 0.01) {
-				
+			if (tankMoved) {
 				// Build packet
 				var packet = {
 					time: time,
 					pos: tankPosition.pos,
 					rot: tankPosition.rot,
-					tRot: tankPosition.tRot - tankPosition.rot, // Include tank rotation so turret is rendered correctly
+					tRot: tankPosition.tRot,
 					aVeloc: tankPosition.aVeloc,
 					lVeloc: tankPosition.lVeloc
 				};
-
-				// Store last position broadcasted
-				this.lastRotation = tankPosition.rot;
-				this.lastTRotation = tankPosition.tRot;
-				this.lastPosition[0] = tankPosition.pos[0];
-				this.lastPosition[1] = tankPosition.pos[1];
-
+				
 				// Broadcast position
 				this.socket.emit('move', packet);
 				this.lastMessageTime = time;
