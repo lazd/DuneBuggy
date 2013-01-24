@@ -38,11 +38,6 @@ db.GameObject = new Class({
 		return this;
 	},
 
-	getModel: function() {
-		return this.root;
-	},
-	
-	// TODO: use only getModel or getRoot
 	getRoot: function() {
 		return this.root;
 	},
