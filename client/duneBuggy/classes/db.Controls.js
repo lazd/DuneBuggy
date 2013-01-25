@@ -58,6 +58,10 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		rotWorldMatrix.multiplySelf(turret.matrix); // pre-multiply
 		turret.matrix = rotWorldMatrix;
 		turret.rotation.setEulerFromRotationMatrix(turret.matrix, 'XYZ');
+		
+		
+		turret.updateMatrixWorld();
+		this.turretRotation.setEulerFromRotationMatrix(turret.matrixWorld);
 	}
 	else if (this.game.pointerLocked) {
 		this.getTurret().rotation.y = mouse.rotationX;
