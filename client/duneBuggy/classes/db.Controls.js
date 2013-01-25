@@ -42,12 +42,33 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		
 	}
 
-	// Turret positioning
+	// Get references to important meshes
+	var turret = this.getTurret();
+	var buggy = this.getRoot();
+	
+	// Make sure the buggy's world matrix is fresh
+	buggy.updateMatrixWorld();
+	
+	// Set rotation values if using a gamepad or locked pointer
+	var xRot, yRot;
 	if (hasGamepad) {
-		var turret = this.getTurret();
-		var xRot = gamepad.aiming.y*5*delta
-		var yRot = gamepad.aiming.x*5*delta;
-		
+		xRot = gamepad.aiming.y*db.config.controls.gamepad.sensitivity*delta
+		yRot = gamepad.aiming.x*db.config.controls.gamepad.sensitivity*delta;
+		if (db.config.controls.gamepad.inverted)
+			xRot *= -1;
+	}
+	else if (this.game.pointerLocked && this.mouseLastX !== undefined && this.mouseLastY !== undefined) {
+		yRot = (this.mouseLastX-mouse.rotationX)*db.config.controls.mouse.sensitivity*delta*-1;
+		xRot = (this.mouseLastY-mouse.rotationY)*db.config.controls.mouse.sensitivity*delta;
+		if (db.config.controls.mouse.inverted)
+			xRot *= -1;
+	}
+	
+	this.mouseLastY = mouse.rotationY;
+	this.mouseLastX = mouse.rotationX;
+	
+	// Turret positioning
+	if (hasGamepad || this.game.pointerLocked) {
 		// Rotate X relative to model axis
 		turret.matrix.rotateX(xRot);
 		
@@ -55,26 +76,14 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		var axis = new THREE.Vector3(0,1,0);
 		var rotWorldMatrix = new THREE.Matrix4();
 		rotWorldMatrix.makeRotationAxis(axis.normalize(), yRot);
-		rotWorldMatrix.multiplySelf(turret.matrix); // pre-multiply
+		rotWorldMatrix.multiplySelf(turret.matrix); // pre-multiply -- not sure what that means?
 		turret.matrix = rotWorldMatrix;
 		turret.rotation.setEulerFromRotationMatrix(turret.matrix, 'XYZ');
-		
 		
 		turret.updateMatrixWorld();
 		this.turretRotation.setEulerFromRotationMatrix(turret.matrixWorld);
 	}
-	else if (this.game.pointerLocked) {
-		this.getTurret().rotation.y = mouse.rotationX;
-		
-		// Needs to set Z or X as a function of Y....
-		this.getTurret().rotation.x = -mouse.rotationY;
-	}
 	else {
-		// Tank position
-		var buggy = this.getRoot()
-		buggy.updateMatrixWorld();
-		var turretPosition = buggy.matrixWorld.multiplyVector3(this.turretOffset.clone());
-		
 		// Mouse position
 		var mouse2D = mouse.position();
 		var mouse3D = this.game.get3DCoords(mouse2D[0], mouse2D[1]);
@@ -93,35 +102,49 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 			targetPoint = mouse3D;
 		}
 	
-		// Draw debug line (laser)
-		this.game.debugLine.geometry.vertices[0].copy(turretPosition);
-		this.game.debugLine.geometry.vertices[1].copy(targetPoint);
-		this.game.debugLine.geometry.verticesNeedUpdate = true;
+		// Laser
+		// turret.updateMatrixWorld(); // Make sure the turret's matrix is fresh
 		
-		var matrix = new THREE.Matrix4();
-		matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
-		this.turretRotation.setEulerFromRotationMatrix(matrix, 'XYZ');
-		
-		// Point the turret at the target
-		var turret = this.getTurret();
+		// Get the world position of the turret
+		var turretPosition = new THREE.Vector3();
+		turretPosition.getPositionFromMatrix(this.turret.matrixWorld);
 		
 		// Look at the target
-		turret.updateMatrixWorld();
-		turret.matrixWorld.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
-		turret.rotation.setEulerFromRotationMatrix(turret.matrixWorld, turret.eulerOrder);
+		var matrix = new THREE.Matrix4();
+		matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
 		
 		/*
-		// Which matrix should be be fing with?
-		turret.updateMatrix();
-		turret.matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
-		turret.rotation.setEulerFromRotationMatrix(turret.matrix, turret.eulerOrder);
+		// Not doing the right thing
+		// Extract the rotation from the buggy
+		var matrix2 = new THREE.Matrix4();
+		matrix2.extractRotation(buggy.matrixWorld);
+
+		// Get the difference in rotation
+		matrix.multiplySelf(matrix2); // UPGRADE: Changes to matrix.multiply in latest!
 		*/
 		
-		// Damn, turret.rotation.y only goes between -Pi/2 and Pi/2!
-		// console.log(turret.rotation.y.toFixed(1), buggy.eulerRotation.y.toFixed(1));
-		// Take tank rotation into account somehow?
-		// turret.rotation.y -= buggy.eulerRotation.y;
+		// Apply the rotation
+		turret.rotation.setEulerFromRotationMatrix(matrix, 'XYZ');
+		
+		// Extract the world rotation
+		turret.updateMatrixWorld();
+		this.turretRotation.setEulerFromRotationMatrix(turret.matrixWorld);
 	}
+	
+	// Laser
+	turret.updateMatrixWorld(); // Make sure the turret's matrix is fresh
+
+	// Get the world position of the turret
+	var turretPosition = new THREE.Vector3();
+	turretPosition.getPositionFromMatrix(this.turret.matrixWorld);
+
+	// Calculate a target point laserOffset away
+	var targetPoint = this.turret.matrixWorld.multiplyVector3(this.laserOffset.clone());
+	
+	// Draw laser line
+	this.game.debugLine.geometry.vertices[0].copy(turretPosition);
+	this.game.debugLine.geometry.vertices[1].copy(targetPoint);
+	this.game.debugLine.geometry.verticesNeedUpdate = true;
 	
 	// Steering
 	if (keyboard.pressed(this.keyMap.keyStateLeft) || keyboard.pressed(this.keyMap.keyStateLeft2))

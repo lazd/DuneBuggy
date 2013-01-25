@@ -31,6 +31,9 @@ db.Buggy = new Class({
 		// Offset bullet start location
 		this.bulletOffset = new THREE.Vector3(0,2,10);
 		
+		// Laser distance target
+		this.laserOffset = new THREE.Vector3(0,0,500);
+		
 		this.controls = {
 			power: null,
 			direction: null,

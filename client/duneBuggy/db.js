@@ -30,6 +30,16 @@ var db = {
 			friend: 0x886A00,
 			enemy: 0x880000
 		},
+		controls: {
+			mouse: {
+				sensitivity: 2,
+				inverted: false
+			},
+			gamepad: {
+				sensitivity: 1.25,
+				inverted: false
+			}
+		},
 		sound: {
 			enabled: false,
 			silentDistance: 1500,
