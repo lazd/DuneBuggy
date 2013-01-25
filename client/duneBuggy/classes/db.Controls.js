@@ -25,6 +25,11 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		var gamepadState = this.game.gamepad.gamepads[0].state;
 		
 		gamepad.direction = gamepadState['LEFT_STICK_X']*-1;
+		gamepad.aiming = {
+			x: gamepadState['RIGHT_STICK_X']*-1,
+			y: gamepadState['RIGHT_STICK_Y']*-1
+		};
+			
 		gamepad.reverse = gamepadState['LEFT_TRIGGER'];
 		gamepad.forward = gamepadState['RIGHT_TRIGGER'];
 		
@@ -38,7 +43,23 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	}
 
 	// Turret positioning
-	if (this.game.pointerLocked) {
+	if (hasGamepad) {
+		var turret = this.getTurret();
+		var xRot = gamepad.aiming.y*5*delta
+		var yRot = gamepad.aiming.x*5*delta;
+		
+		// Rotate X relative to model axis
+		turret.matrix.rotateX(xRot);
+		
+		// Rotate Y relative to world axis
+		var axis = new THREE.Vector3(0,1,0);
+		var rotWorldMatrix = new THREE.Matrix4();
+		rotWorldMatrix.makeRotationAxis(axis.normalize(), yRot);
+		rotWorldMatrix.multiplySelf(turret.matrix); // pre-multiply
+		turret.matrix = rotWorldMatrix;
+		turret.rotation.setEulerFromRotationMatrix(turret.matrix, 'XYZ');
+	}
+	else if (this.game.pointerLocked) {
 		this.getTurret().rotation.y = mouse.rotationX;
 		
 		// Needs to set Z or X as a function of Y....
