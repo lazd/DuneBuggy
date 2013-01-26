@@ -110,21 +110,31 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		turretPosition.getPositionFromMatrix(this.turret.matrixWorld);
 		
 		// Look at the target
-		var matrix = new THREE.Matrix4();
-		matrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
+		var turretRotationMatrix = new THREE.Matrix4();
+		turretRotationMatrix.lookAt(targetPoint, turretPosition, new THREE.Vector3(0,1,0));
 		
 		/*
-		// Not doing the right thing
+		// Method 1: Offset by buggy rotation
+		
 		// Extract the rotation from the buggy
-		var matrix2 = new THREE.Matrix4();
-		matrix2.extractRotation(buggy.matrixWorld);
+		var buggyRotationMatrix = new THREE.Matrix4();
+		buggyRotationMatrix.extractRotation(buggy.matrixWorld);
+
+		// Get the inverse
+		var inverseMatrix = new THREE.Matrix4();
+		inverseMatrix.getInverse(buggyRotationMatrix);
 
 		// Get the difference in rotation
-		matrix.multiplySelf(matrix2); // UPGRADE: Changes to matrix.multiply in latest!
-		*/
+		turretRotationMatrix.multiplySelf(inverseMatrix); // UPGRADE: Changes to matrix.multiply in latest!
 		
 		// Apply the rotation
-		turret.rotation.setEulerFromRotationMatrix(matrix, 'XYZ');
+		turret.rotation.setEulerFromRotationMatrix(turretRotationMatrix, 'XYZ');
+		*/
+		
+		// Method 2: Apply Y rotation
+		turretRotationMatrix.rotateY(-buggy.eulerRotation.y);
+		turret.rotation.setEulerFromRotationMatrix(turretRotationMatrix, 'XYZ');
+		
 		
 		// Extract the world rotation
 		turret.updateMatrixWorld();
