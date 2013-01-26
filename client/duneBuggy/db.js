@@ -37,7 +37,7 @@ var db = {
 			},
 			gamepad: {
 				sensitivity: 1.25,
-				inverted: false
+				inverted: true
 			}
 		},
 		sound: {
