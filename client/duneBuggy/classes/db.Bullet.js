@@ -52,15 +52,16 @@
 		},
 		
 		update: function() {
-			// Attempt to keep the bullet flying straight
-			// this.root.applyCentralImpulse(this.forceVector);
-			// this.root.setLinearVelocity(this.velocityVector);
+			// Remove bullets if they've been around for too long
+			var curTime = new Date().getTime();
+			if (curTime - this.time > this.game.options.weapons.bullet.time)
+				this.destruct();
 		},
 		
 		init: function() {
 			this.inherited(arguments);
 			
-			// Enable CCD if the object moves more than 1 meter in one simulation frame
+			// Enable CCD if the bullet moves more than 1 meter in one simulation frame
 			this.root.setCcdMotionThreshold(4);
 			this.root.setCcdSweptSphereRadius(0.8);
 			
