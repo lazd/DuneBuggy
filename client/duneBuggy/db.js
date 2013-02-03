@@ -32,7 +32,7 @@ var db = {
 		},
 		controls: {
 			mouse: {
-				sensitivity: 2,
+				sensitivity: 8,
 				inverted: false
 			},
 			gamepad: {
