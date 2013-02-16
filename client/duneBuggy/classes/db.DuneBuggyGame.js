@@ -182,6 +182,7 @@ db.DuneBuggyGame = new Class({
 		
 		// Create camera that follows tank
 		this.cameraControls = new db.CameraControls({
+			game: this,
 			tank: this.tank,
 			scene: this.scene,
 			camera: this.camera,
