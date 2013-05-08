@@ -53,7 +53,7 @@
 			var rotation_matrix = new THREE.Matrix4();
 			rotation_matrix.extractRotation(this.root.matrix);
 			var force_vector = new THREE.Vector3(0, 250, 0);
-			var final_force_vector = rotation_matrix.multiplyVector3(force_vector);
+			force_vector.applyMatrix4(rotation_matrix);
 			this.root.applyCentralImpulse(final_force_vector);
 		},
 	

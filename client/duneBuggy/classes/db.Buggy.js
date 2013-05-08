@@ -195,8 +195,8 @@ db.Buggy = new Class({
 		if (interpolate) {
 			// Interpolate position by adding the difference of the calulcated position and the position sent by the authoritative client
 			var newPositionVec = new THREE.Vector3(position[0], position[1], position[2]);
-			var posErrorVec = newPositionVec.subSelf(this.root.position).multiplySelf(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));
-			this.root.position.addSelf(posErrorVec);
+			var posErrorVec = newPositionVec.sub(this.root.position).multiply(new THREE.Vector3(posInterpolation, posInterpolation, posInterpolation));
+			this.root.position.add(posErrorVec);
 		}
 		else {
 			// Directly set position
@@ -258,7 +258,7 @@ db.Buggy = new Class({
 		this.root.eulerRotation = rotation;
 		
 		// Store position of bullet relative to the world
-		this.bulletPosition = this.turret.matrixWorld.multiplyVector3(this.bulletOffset.clone());
+		this.bulletPosition = this.bulletOffset.clone().applyMatrix4(this.turret.matrixWorld);
 	},
 	
 	handleControls: function(delta) {

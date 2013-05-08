@@ -167,9 +167,6 @@ db.DuneBuggyGame = new Class({
 	initialize: function() {
 		console.log('Initializing game...');
 		
-		// Ground plane
-		this.ground = new db.Ground({ game: this });
-		
 		// Buggy
 		this.tank = new db.Buggy({
 			game: this,
@@ -212,6 +209,9 @@ db.DuneBuggyGame = new Class({
 		this.comm.on('leave', this.handleLeave);
 		
 		this.comm.on('move', this.handleMove);
+		
+		// Ground plane
+		this.ground = new db.Ground({ game: this });
 		
 		/******************
 		Rendering hooks

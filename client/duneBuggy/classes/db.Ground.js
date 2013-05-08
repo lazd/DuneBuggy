@@ -30,9 +30,11 @@
 			});
 			
 			this.root = new Physijs.ConcaveMesh(geometry, new THREE.MeshFaceMaterial(materials), 0);
-			this.root.receiveShadow = true;
+			// this.root.receiveShadow = true;
 			this.root.position.copy(options.position);
 			this.root.rotation.copy(options.rotation);
+		},
+		init: function() {
 			this.options.game.scene.add(this.root);
 		}
 	});

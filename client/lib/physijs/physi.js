@@ -2,6 +2,7 @@
 
 window.Physijs = (function() {
 	var THREE_REVISION = parseInt( THREE.REVISION, 10 ),
+		SUPPORT_TRANSFERABLE,
 		_matrix = new THREE.Matrix4, _is_simulating = false,
 		_Physijs = Physijs, // used for noConflict method
 		Physijs = {}, // object assigned to window.Physijs
@@ -17,7 +18,7 @@ window.Physijs = (function() {
 		_temp_matrix4_1 = new THREE.Matrix4,
 		_quaternion_1 = new THREE.Quaternion,
 
-		// constants
+	// constants
 		MESSAGE_TYPES = {
 			WORLDREPORT: 0,
 			COLLISIONREPORT: 1,
@@ -68,7 +69,7 @@ window.Physijs = (function() {
 	};
 
 	getObjectId = (function() {
-		var _id = 0;
+		var _id = 1;
 		return function() {
 			return _id++;
 		};
@@ -113,14 +114,15 @@ window.Physijs = (function() {
 		}
 
 		// Invert rotation matrix in order to "unrotate" a point back to object space
-		_temp_matrix4_1.getInverse( _temp_matrix4_1 ); 
+		_temp_matrix4_1.getInverse( _temp_matrix4_1 );
 
 		// Yay! Temp vars!
 		_temp_vector3_1.copy( position );
 		_temp_vector3_2.copy( object.position );
 
 		// Apply the rotation
-		return _temp_matrix4_1.multiplyVector3( _temp_vector3_1.subSelf( _temp_vector3_2 ) );
+
+		return _temp_vector3_1.sub( _temp_vector3_2 ).applyMatrix4( _temp_matrix4_1 );
 	};
 
 
@@ -392,43 +394,53 @@ window.Physijs = (function() {
 		THREE.Scene.call( this );
 
 		this._worker = new Worker( Physijs.scripts.worker || 'physijs_worker.js' );
+		this._worker.transferableMessage = this._worker.webkitPostMessage || this._worker.postMessage;
 		this._materials = {};
 		this._objects = {};
 		this._vehicles = {};
 		this._constraints = {};
-		
-		this._worker.onmessage = function ( event ) {
-			var _temp;
 
-			if ( event.data instanceof Float32Array ) {
+		var ab = new ArrayBuffer( 1 );
+		this._worker.transferableMessage( ab, [ab] );
+		SUPPORT_TRANSFERABLE = ( ab.byteLength === 0 );
+
+		this._worker.onmessage = function ( event ) {
+			var _temp,
+				data = event.data;
+
+			if ( data instanceof ArrayBuffer && data.byteLength !== 1 ) { // byteLength === 1 is the worker making a SUPPORT_TRANSFERABLE test
+				data = new Float32Array( data );
+			}
+
+			if ( data instanceof Float32Array ) {
 
 				// transferable object
-				switch ( event.data[0] ) {
+				switch ( data[0] ) {
 					case MESSAGE_TYPES.WORLDREPORT:
-						self._updateScene( event.data );
+						self._updateScene( data );
 						break;
 
 					case MESSAGE_TYPES.COLLISIONREPORT:
-						self._updateCollisions( event.data );
+						self._updateCollisions( data );
 						break;
 
 					case MESSAGE_TYPES.VEHICLEREPORT:
-						self._updateVehicles( event.data );
+						self._updateVehicles( data );
 						break;
 
 					case MESSAGE_TYPES.CONSTRAINTREPORT:
-						self._updateConstraints( event.data );
+						self._updateConstraints( data );
 						break;
 				}
 
 			} else {
 
-				if ( event.data.cmd ) {
+				if ( data.cmd ) {
 
 					// non-transferable object
-					switch ( event.data.cmd ) {
+					switch ( data.cmd ) {
 						case 'objectReady':
-							_temp = event.data.params;
+							_temp = data.params;
 							if ( self._objects[ _temp ] ) {
 								self._objects[ _temp ].dispatchEvent( 'ready' );
 							}
@@ -439,33 +451,33 @@ window.Physijs = (function() {
 							break;
 
 						case 'vehicle':
-							window.test = event.data;
+							window.test = data;
 							break;
 
 						default:
 							// Do nothing, just show the message
-							console.debug('Received: ' + event.data.cmd);
-							console.dir(event.data.params);
+							console.debug('Received: ' + data.cmd);
+							console.dir(data.params);
 							break;
 					}
 
 				} else {
 
-					switch ( event.data[0] ) {
+					switch ( data[0] ) {
 						case MESSAGE_TYPES.WORLDREPORT:
-							self._updateScene( event.data );
+							self._updateScene( data );
 							break;
 
 						case MESSAGE_TYPES.COLLISIONREPORT:
-							self._updateCollisions( event.data );
+							self._updateCollisions( data );
 							break;
 
 						case MESSAGE_TYPES.VEHICLEREPORT:
-							self._updateVehicles( event.data );
+							self._updateVehicles( data );
 							break;
 
 						case MESSAGE_TYPES.CONSTRAINTREPORT:
-							self._updateConstraints( event.data );
+							self._updateConstraints( data );
 							break;
 					}
 
@@ -515,30 +527,12 @@ window.Physijs = (function() {
 						data[ offset + 7 ]
 					);
 				} else {
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XYZ'); // Z and X are correct, Y is wrong
-
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'YXZ'); // Correct, Very close, but it seems some values are reversed when upside down
-									
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'ZXY'); // Wobbly while turning, weird rotation when flipping
-
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'ZYX'); // Totally wrong, vehicle barrel rolls while turning
-
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'YZX'); // Y is correct, Z and X are wrong when flipping
-					
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XZY'); // Weird and wobbly, shit is whack
-					
-					// Hack it
-					// object.rotation.setEulerFromQuaternion(new THREE.Quaternion(data[ offset + 4 ], data[ offset + 5 ], data[ offset + 6 ], data[ offset + 7 ]), 'XZY'); // Weird and wobbly, shit is whack
-					// 
-					// object.worldY = object.rotation.y;
-					
 					object.rotation = getEulerXYZFromQuaternion(
 						data[ offset + 4 ],
 						data[ offset + 5 ],
 						data[ offset + 6 ],
 						data[ offset + 7 ]
 					);
-					
 				}
 			}
 
@@ -556,9 +550,9 @@ window.Physijs = (function() {
 
 		}
 
-		if ( this._worker.webkitPostMessage ) {
+		if ( SUPPORT_TRANSFERABLE ) {
 			// Give the typed array back to the worker
-			this._worker.webkitPostMessage( data, [data.buffer] );
+			this._worker.transferableMessage( data.buffer, [data.buffer] );
 		}
 
 		_is_simulating = false;
@@ -603,9 +597,9 @@ window.Physijs = (function() {
 
 		}
 
-		if ( this._worker.webkitPostMessage ) {
+		if ( SUPPORT_TRANSFERABLE ) {
 			// Give the typed array back to the worker
-			this._worker.webkitPostMessage( data, [data.buffer] );
+			this._worker.transferableMessage( data.buffer, [data.buffer] );
 		}
 	};
 
@@ -628,15 +622,15 @@ window.Physijs = (function() {
 				data[ offset + 4 ]
 			);
 			_temp_matrix4_1.extractRotation( object.matrix );
-			_temp_matrix4_1.multiplyVector3( _temp_vector3_1 );
+			_temp_vector3_1.applyMatrix4( _temp_matrix4_1 );
 
-			constraint.positiona.add( object.position, _temp_vector3_1 );
+			constraint.positiona.addVectors( object.position, _temp_vector3_1 );
 			constraint.appliedImpulse = data[ offset + 5 ] ;
 		}
 
-		if ( this._worker.webkitPostMessage ) {
+		if ( SUPPORT_TRANSFERABLE ) {
 			// Give the typed array back to the worker
-			this._worker.webkitPostMessage( data, [data.buffer] );
+			this._worker.transferableMessage( data.buffer, [data.buffer] );
 		}
 	};
 
@@ -675,20 +669,22 @@ window.Physijs = (function() {
 				for ( j = 0; j < collisions[ object._physijs.id ].length; j++ ) {
 					object2 = this._objects[ collisions[ object._physijs.id ][j] ];
 
-					if ( object._physijs.touches.indexOf( object2._physijs.id ) === -1 ) {
-						object._physijs.touches.push( object2._physijs.id );
+					if ( object2 ) {
+						if ( object._physijs.touches.indexOf( object2._physijs.id ) === -1 ) {
+							object._physijs.touches.push( object2._physijs.id );
 
-						_temp_vector3_1.sub( object.getLinearVelocity(), object2.getLinearVelocity() );
-						_temp1 = _temp_vector3_1.clone();
+							_temp_vector3_1.subVectors( object.getLinearVelocity(), object2.getLinearVelocity() );
+							_temp1 = _temp_vector3_1.clone();
 
-						_temp_vector3_1.sub( object.getAngularVelocity(), object2.getAngularVelocity() );
-						_temp2 = _temp_vector3_1;
+							_temp_vector3_1.subVectors( object.getAngularVelocity(), object2.getAngularVelocity() );
+							_temp2 = _temp_vector3_1;
 
-						object.dispatchEvent( 'collision', object2, _temp1, _temp2 );
-						object2.dispatchEvent( 'collision', object, _temp1, _temp2 );
+							object.dispatchEvent( 'collision', object2, _temp1, _temp2 );
+							object2.dispatchEvent( 'collision', object, _temp1, _temp2 );
+						}
+
+						collided_with.push( object2._physijs.id );
 					}
-
-					collided_with.push( object2._physijs.id );
 				}
 				for ( j = 0; j < object._physijs.touches.length; j++ ) {
 					if ( collided_with.indexOf( object._physijs.touches[j] ) === -1 ) {
@@ -705,9 +701,23 @@ window.Physijs = (function() {
 
 		}
 
-		if ( this._worker.webkitPostMessage ) {
+    // if A is in B's collision list, then B should be in A's collision list
+    for (var id in collisions) {
+		if ( collisions.hasOwnProperty( id ) && collisions[id] ) {
+			for (var j=0; j < collisions[id].length; j++) {
+				if (collisions[id][j]) {
+					collisions[ collisions[id][j] ] = collisions[ collisions[id][j] ] || [];
+					collisions[ collisions[id][j] ].push(id);
+				}
+			}
+		}
+    }
+
+    this.collisions = collisions;
+
+		if ( SUPPORT_TRANSFERABLE ) {
 			// Give the typed array back to the worker
-			this._worker.webkitPostMessage( data, [data.buffer] );
+			this._worker.transferableMessage( data.buffer, [data.buffer] );
 		}
 	};
 
@@ -1119,7 +1129,7 @@ window.Physijs = (function() {
 		this._physijs.points = points;
 	};
 	Physijs.HeightfieldMesh.prototype = new Physijs.Mesh;
-	Physijs.HeightfieldMesh.prototype.constructor = Physijs.HeightfieldMesh;	
+	Physijs.HeightfieldMesh.prototype.constructor = Physijs.HeightfieldMesh;
 
 	// Physijs.BoxMesh
 	Physijs.BoxMesh = function( geometry, material, mass ) {
@@ -1295,20 +1305,11 @@ window.Physijs = (function() {
 		}
 
 		for ( i = 0; i < geometry.vertices.length; i++ ) {
-			if ( THREE_REVISION >= 49 ) {
-				points.push({
-					x: geometry.vertices[i].x,
-					y: geometry.vertices[i].y,
-					z: geometry.vertices[i].z
-				});
-			} else {
-				points.push({
-					x: geometry.vertices[i].position.x,
-					y: geometry.vertices[i].position.y,
-					z: geometry.vertices[i].position.z
-				});
-
-			}
+			points.push({
+				x: geometry.vertices[i].x,
+				y: geometry.vertices[i].y,
+				z: geometry.vertices[i].z
+			});
 		}
 
 
@@ -1343,7 +1344,7 @@ window.Physijs = (function() {
 	Physijs.Vehicle.prototype.addWheel = function( wheel_geometry, wheel_material, connection_point, wheel_direction, wheel_axle, suspension_rest_length, wheel_radius, is_front_wheel, tuning ) {
 		var wheel = new THREE.Mesh( wheel_geometry, wheel_material );
 		wheel.castShadow = wheel.receiveShadow = true;
-		wheel.position.copy( wheel_direction ).multiplyScalar( suspension_rest_length / 100 ).addSelf( connection_point );
+		wheel.position.copy( wheel_direction ).multiplyScalar( suspension_rest_length / 100 ).add( connection_point );
 		this.world.add( wheel );
 		this.wheels.push( wheel );
 

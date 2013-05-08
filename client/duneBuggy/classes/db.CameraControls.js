@@ -48,7 +48,8 @@ db.CameraControls = new Class({
 				// Update the matrix before we calculate
 				tankMesh.updateMatrixWorld();
 				
-				var newCameraPosition = tankMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ));
+				var newCameraPosition = new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ);
+				newCameraPosition.applyMatrix4(tankMesh.matrixWorld);
 				
 				// Fixed Y position
 				newCameraPosition.y = this.options.camera.position.y;
@@ -69,7 +70,8 @@ db.CameraControls = new Class({
 				tankMesh.updateMatrixWorld();
 				turretMesh.updateMatrixWorld();
 
-				var newCameraPosition = turretMesh.matrixWorld.multiplyVector3(new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ));
+				var newCameraPosition = new THREE.Vector3(0,this.options.chase.height,-this.options.chase.trailZ);
+				newCameraPosition.applyMatrix4(turretMesh.matrixWorld);
 				
 				// Fixed Y position, may not be ideal for aiming
 				newCameraPosition.y = this.options.camera.position.y;

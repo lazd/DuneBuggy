@@ -73,7 +73,7 @@
 			rotationMatrix.extractRotation(this.root.matrix);
 			
 			// Get a force vetor based on the bullet's rotation
-			this.forceVector = rotationMatrix.multiplyVector3(new THREE.Vector3(0, 0, this.game.options.weapons.bullet.impulse));
+			this.forceVector = new THREE.Vector3(0, 0, this.game.options.weapons.bullet.impulse).applyMatrix4(rotationMatrix);
 
 			// Apply a force to the bullet so it goes forward
 			this.root.applyCentralImpulse(this.forceVector);

@@ -267,9 +267,9 @@ db.Game = new Class({
 	createRay: function(pointA, pointB) {
 		var rayStart = pointA;
 		var rayDirection = new THREE.Vector3();
-		rayDirection.sub(pointB, pointA).normalize();
+		rayDirection.subVectors(pointB, pointA).normalize();
 		
-		return new THREE.Ray(rayStart, rayDirection);
+		return new THREE.Raycaster(rayStart, rayDirection);
 	},
 	
 	getNDCX: function(x) {
@@ -315,7 +315,7 @@ db.Game = new Class({
 		endVector = this.projector.unprojectVector(endVector, this.camera);
 		
 		// Get direction from startVector to endVector
-		dirVector.sub(endVector, startVector);
+		dirVector.subVectors(endVector, startVector);
 		dirVector.normalize();
 		
 		// Find intersection where y = 0

@@ -113,7 +113,7 @@
 			for (var i = this.particles.vertices.length-1; i >= 0; i--) {
 				var particle = this.particles.vertices[i];
 				// Change the particle's position
-				particle.addSelf(particle.velocity);
+				particle.add(particle.velocity);
 
 				if (particle.y < -this.options.size) {
 					this.particlesGone++;

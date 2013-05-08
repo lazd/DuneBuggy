@@ -76,7 +76,7 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		var axis = new THREE.Vector3(0,1,0);
 		var rotWorldMatrix = new THREE.Matrix4();
 		rotWorldMatrix.makeRotationAxis(axis.normalize(), yRot);
-		rotWorldMatrix.multiplySelf(turret.matrix); // pre-multiply -- not sure what that means?
+		rotWorldMatrix.multiply(turret.matrix); // pre-multiply -- not sure what that means?
 		turret.matrix = rotWorldMatrix;
 		turret.rotation.setEulerFromRotationMatrix(turret.matrix, 'XYZ');
 		
@@ -125,7 +125,7 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 		inverseMatrix.getInverse(buggyRotationMatrix);
 
 		// Get the difference in rotation
-		turretRotationMatrix.multiplySelf(inverseMatrix); // UPGRADE: Changes to matrix.multiply in latest!
+		turretRotationMatrix.multiply(inverseMatrix); // UPGRADE: Changes to matrix.multiply in latest!
 		
 		// Apply the rotation
 		turret.rotation.setEulerFromRotationMatrix(turretRotationMatrix, 'XYZ');
@@ -149,7 +149,7 @@ db.Buggy.prototype.controlsLoopCb = function(delta, now) {
 	turretPosition.getPositionFromMatrix(this.turret.matrixWorld);
 
 	// Calculate a target point laserOffset away
-	var targetPoint = this.turret.matrixWorld.multiplyVector3(this.laserOffset.clone());
+	var targetPoint = this.laserOffset.clone().applyMatrix4(this.turret.matrixWorld);
 	
 	// Draw laser line
 	this.game.debugLine.geometry.vertices[0].copy(turretPosition);
